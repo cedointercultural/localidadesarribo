@@ -26,7 +26,7 @@ ent.dat <- readr::read_csv(here::here("edos_gcyuc.csv")) %>%
 
 #leer googlesheet directamente
 googlesheets4::gs4_deauth()
-locs.pesca <- googlesheets4::read_sheet("1Nww_0aSf2yQv9YqK8LqmJmIM2wwpHZCSpG1NcGfIfHQ")
+locs.pesca <- googlesheets4::read_sheet(APIKEY)
 
 #usar nombres revisados para busqueda
 locs.pesca.faltantes <- locs.pesca %>%
