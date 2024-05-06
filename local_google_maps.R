@@ -26,7 +26,7 @@ ent.dat <- readr::read_csv(here::here("edos_gcyuc.csv")) %>%
 
 #leer googlesheet directamente
 googlesheets4::gs4_deauth()
-locs.pesca <- googlesheets4::read_sheet(APIKEY)
+locs.pesca <- googlesheets4::read_sheet("1Nww_0aSf2yQv9YqK8LqmJmIM2wwpHZCSpG1NcGfIfHQ")
 
 #usar nombres revisados para busqueda
 locs.pesca.faltantes <- locs.pesca %>%
@@ -38,7 +38,7 @@ locs.pesca.faltantes <- locs.pesca %>%
 no.locs <- 1:nrow(locs.pesca.faltantes)
 
 
-ggmap::register_google(key = "AIzaSyCBw_fW7KXU8_cGzg4nNTFCrzl9pmKzs_g", write = TRUE)
+ggmap::register_google(key = "AIzaSyCgsdgFvjpvROnXBt2CWtHe7RKJ2Ox8_us", write = TRUE)
 
 #Use mutate_geocode() to create a new data frame with added columns for latitude and longitude coordinates (output = "latlon" argument). output = "latlona" returns latitude, longitude, and the matched address (to cross-check against your address) as new columns.
 
