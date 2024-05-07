@@ -17,7 +17,7 @@
 #' Extract permit with location information to match with catch records
 #' 
 extract_permits <- function(thispermitfile.no, permit.files, inegi.cost.comm.all, 
-                            coast.selecc, locs.pesca){
+                            coast.selecc, locs.pesca, georef.locs.gc){
 
   this.permitfile <- permit.files[thispermitfile.no]
 
@@ -37,7 +37,7 @@ extract_permits <- function(thispermitfile.no, permit.files, inegi.cost.comm.all
   if("CLAVE DE RNP" %in% names.data) {
 
     this.permit.data <- this.permit.data %>%
-    dplyr::rename(rnp_code =`CLAVE DE RNP`)
+    dplyr::rename(rnp_code =`CLAVE DE RNP`) 
   }
 
 
@@ -48,14 +48,17 @@ extract_permits <- function(thispermitfile.no, permit.files, inegi.cost.comm.all
 
   if("rnpa" %in% names.data){
     this.permit.data <- this.permit.data %>%
-      dplyr::rename(rnp_code =`rnpa`)
+      dplyr::rename(rnp_code =`rnpa`) %>% 
+      keep_when(tipo_embarcacion=="Menor")
+    
   }
   
   
   if("RNP_TITULAR" %in% names.data) {
 
     this.permit.data <- this.permit.data %>%
-      dplyr::rename(rnp_code = RNP_TITULAR)
+      dplyr::rename(rnp_code = RNP_TITULAR) %>% 
+      keep_when(TIPO_EMBARCACION!="MAYOR")
   }
 
   if("RNPA ACTIVO" %in% names.data) {
@@ -108,6 +111,12 @@ extract_permits <- function(thispermitfile.no, permit.files, inegi.cost.comm.all
     this.permit.data <- this.permit.data %>%
       dplyr::rename(NOM_LOC=`NOMBRE OFICINA`)
   }
+  
+  if("TIPO DE TRAMITE" %in% names.data) {
+    
+    this.permit.data <- this.permit.data %>%
+      keep_when(`TIPO DE TRAMITE`!= "FOMENTO")
+  }
 
   if(class(this.permit.data$rnp_code)=="numeric" | class(this.permit.data$rnp_code)=="double"){
     
@@ -131,6 +140,16 @@ extract_permits <- function(thispermitfile.no, permit.files, inegi.cost.comm.all
     dplyr::left_join(inegi.cost.comm.all, by =c("NOM_ENT","NOM_LOC")) %>% 
     select(rnp_code, NOM_LOC, NOM_MUN, NOM_ENT, CVE_LOC, CVE_MUN, CVE_ENT, deci_lat, deci_lon)
  
-  return(this.permit.inegi)
+  this.permit.inegi.locs <- this.permit.inegi %>% 
+    dplyr::rename(dec_lat_inegi = deci_lat, dec_lon_inegi = deci_lon) %>%
+    dplyr::left_join(georef.locs.gc, by = c("NOM_ENT", "NOM_LOC")) %>% 
+    mutate(deci_lat = dplyr::if_else(is.na(dec_lat_inegi), dec_lat_google, dec_lat_inegi), 
+           deci_lon = dplyr::if_else(is.na(dec_lon_inegi), dec_lon_google, dec_lon_inegi)) %>% 
+    keep_when(!is.na(rnp_code) & !is.na(deci_lat) & !is.na(deci_lon)) %>% 
+    distinct(rnp_code, NOM_LOC, NOM_MUN, NOM_ENT, CVE_LOC, CVE_MUN, CVE_ENT, deci_lat, deci_lon)
+  
+ # this.permit.inegi.locs %>% View()
+  
+  return(this.permit.inegi.locs)
 }
 
