@@ -32,31 +32,126 @@ googlesheets4::gs4_deauth()
 ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
 coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
 
+inegi.cost.comm.all  <- readr::read_csv(paste0("~/coastalvulnerability-inputs/processed_data/all_coastal_communities_INEGI.csv")) %>% 
+  mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
+  mutate(NOM_MUN = stringi::stri_trans_general(str = NOM_MUN, id = "Latin-ASCII"), NOM_MUN = toupper(NOM_MUN)) %>% 
+  mutate(NOM_LOC = stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
+  keep_when(NOM_ENT %in% coast.selecc) 
+
+inegi.cost.geo <- inegi.cost.comm.all %>% 
+  dplyr::arrange(NOM_ENT, NOM_MUN, NOM_LOC) %>% 
+  dplyr::group_by(NOM_ENT, NOM_LOC, NOM_MUN) %>% 
+  summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon))
+
+
+inegi.cost.geo.dis <- inegi.cost.geo %>% 
+  dplyr::left_join(inegi.cost.comm.all, by = c("NOM_ENT", "NOM_MUN","NOM_LOC"))
+
+inegi.cost.ent.loc <- inegi.cost.comm.all %>% 
+ distinct(NOM_ENT, NOM_LOC) 
+
+#test for duplicates 
+dupes.inegi <- inegi.cost.comm.all %>% 
+  group_by(NOM_ENT, NOM_LOC) %>% 
+  mutate(dupe = dplyr::n()>1) %>% 
+  keep_when(dupe == TRUE)
+
+#difference in locs.inegi
+
 locs.inegi <- googlesheets4::read_sheet("1Nww_0aSf2yQv9YqK8LqmJmIM2wwpHZCSpG1NcGfIfHQ", sheet = "busqueda_inegi") %>% 
   dplyr::rename(deci_lat=latitud, deci_lon=longitud) %>% 
   keep_when(utilizar == 1) %>% 
+  keep_when(NOM_ENT %in% coast.selecc) %>% 
   select(NOM_ENT, NOM_LOC, deci_lat, deci_lon)
+
+#test for duplicates 
+dupes.inegi <- locs.inegi %>% 
+  group_by(NOM_ENT, NOM_LOC) %>% 
+  mutate(dupe = dplyr::n()>1) %>% 
+  keep_when(dupe == TRUE)
+
+#to eliminate duplicates get the mean of the lat and lon
+locs.inegi.dis <- locs.inegi %>% 
+  group_by(NOM_ENT, NOM_LOC) %>% 
+  summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon))
+
+locs.inegi.ent.loc <- locs.inegi.dis %>% 
+  distinct(NOM_ENT, NOM_LOC) 
+
+diff.inegi <- dplyr::setdiff(locs.inegi.ent.loc, inegi.cost.ent.loc)
+
+locs.inegi.add <- diff.inegi %>% 
+  dplyr::left_join(locs.inegi.dis, by = c("NOM_ENT", "NOM_LOC")) %>% 
+  mutate(source= "inegi")
 
 locs.google <- googlesheets4::read_sheet("1Nww_0aSf2yQv9YqK8LqmJmIM2wwpHZCSpG1NcGfIfHQ", sheet = "busqueda_google") %>% 
   dplyr::rename(NOM_LOC=NOM_LOC_REV, deci_lat=lat, deci_lon=lon) %>% 
+  keep_when(NOM_ENT %in% coast.selecc) %>% 
   keep_when(utilizar == 1) %>% 
   select(NOM_ENT, NOM_LOC, deci_lat, deci_lon) %>% 
   mutate(deci_lon=as.numeric(deci_lon), deci_lat=as.numeric(deci_lat))
 
+#test for duplicates 
+dupes.google <- locs.google %>% 
+  group_by(NOM_ENT, NOM_LOC) %>% 
+  mutate(dupe = dplyr::n()>1)
+
+#no duplicates present, only get difference from INEGI
+
+locs.google.ent.loc <- locs.google %>% 
+  distinct(NOM_ENT, NOM_LOC) 
+
+diff.google <- dplyr::setdiff(locs.google.ent.loc, inegi.cost.ent.loc)
+
+locs.google.add <- diff.google %>% 
+  dplyr::left_join(locs.google, by = c("NOM_ENT", "NOM_LOC")) 
+
+#Atlas fishing locations Pacific
 locs.pesca.pacifico <- googlesheets4::read_sheet("1KxO30FqYed655frJDiLobx3N-slFNpNLpHnbxE4cLcI") %>% 
   dplyr::rename(NOM_ENT= ESTADO, NOM_LOC = LOCALIDAD_REVISADA) %>% 
   mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
   mutate(NOM_LOC = stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
   select(-LOCALIDAD_ORIGINAL, -ID) %>% 
-  dplyr::rename(deci_lat =LATITUD, deci_lon=LONGITUD)
-
-georef.locs <- dplyr::bind_rows(locs.inegi, locs.google, locs.pesca.pacifico) %>% 
-  distinct(NOM_ENT, NOM_LOC, deci_lat, deci_lon) 
-
-georef.locs.gc <- georef.locs %>%
+  dplyr::rename(deci_lat =LATITUD, deci_lon=LONGITUD) %>% 
   keep_when(NOM_ENT %in% coast.selecc)
 
-readr::write_csv(georef.locs.gc, here::here("outputs","georef_locations.csv"))
+#test for duplicates 
+dupes.pacifico <- locs.pesca.pacifico %>% 
+  group_by(NOM_ENT, NOM_LOC) %>% 
+  mutate(dupe = dplyr::n()>1)
+
+#to eliminate duplicates get the mean of the lat and lon
+locs.pacifico.dis <- locs.pesca.pacifico %>% 
+  group_by(NOM_ENT, NOM_LOC) %>% 
+  summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon))
+
+#get difference from INEGI
+
+locs.pacifico.ent.loc <- locs.pacifico.dis %>% 
+  distinct(NOM_ENT, NOM_LOC) 
+
+diff.pacifico <- dplyr::setdiff(locs.pacifico.ent.loc, inegi.cost.ent.loc)
+
+locs.pacifico.add <- diff.pacifico %>% 
+  dplyr::left_join(locs.pacifico.dis, by = c("NOM_ENT", "NOM_LOC")) 
+
+#combine all locations
+georef.locs <- dplyr::bind_rows(inegi.cost.comm.all, locs.inegi.add, locs.google.add, locs.pacifico.add) %>% 
+  distinct(NOM_ENT, NOM_LOC, deci_lat, deci_lon) 
+
+#test for duplicates 
+dupes.georef.locs <- georef.locs %>% 
+  group_by(NOM_ENT, NOM_LOC) %>% 
+  mutate(dupe = dplyr::n()>1) %>% 
+  keep_when(dupe == TRUE)
+
+
+georef.locs.all <- georef.locs %>%
+  keep_when(NOM_ENT %in% coast.selecc) %>% 
+  group_by(NOM_ENT, NOM_LOC) %>%
+  summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon))
+
+readr::write_csv(georef.locs.all, here::here("outputs","georef_locations.csv"))
 
 
 ```
@@ -68,7 +163,7 @@ https://www.gob.mx/conapesca/documentos/registro-nacional-de-pesca-y-acuacultura
 
 ```{r get catch, message=TRUE, warning=TRUE, include=FALSE}
 
-georef.locs.gc <- readr::read_csv(here::here("outputs","georef_locations.csv")) %>% 
+georef.locs.all <- readr::read_csv(here::here("outputs","georef_locations.csv")) %>% 
   dplyr::rename(dec_lat_google = deci_lat, dec_lon_google = deci_lon)
 
 
@@ -100,7 +195,7 @@ inegi.cost.mun <- inegi.cost.comm.all %>%
 permit.files <- list.files(path = here::here("data-raw","permit_data"), full.names = TRUE)
 no.permitfiles <- 1:length(permit.files)
 
-permit.data <- lapply(no.permitfiles, extract_permits, permit.files, inegi.cost.comm.all, coast.selecc, locs.pesca, georef.locs.gc)
+permit.data <- lapply(no.permitfiles, extract_permits, permit.files, inegi.cost.comm.all, coast.selecc, locs.pesca, georef.locs.all)
 
 permit.data.rev <- permit.data %>% 
   dplyr::bind_rows()
@@ -112,11 +207,29 @@ readr::write_csv(permit.locs.geo, here::here("outputs","rnp_fishery_permits.csv"
 
 
 ```
+
 Get RNP codes from catch records and georreferrence
 ```{r}
 
-georef.locs.gc <- readr::read_csv(here::here("outputs","georef_locations.csv")) %>% 
+#all coastal communities, including those with no census data
+inegi.cost.comm.all  <- readr::read_csv(here::here("data-raw","all_coastal_communities_INEGI.csv")) %>% 
+  mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
+  mutate(NOM_MUN = stringi::stri_trans_general(str = NOM_MUN, id = "Latin-ASCII"), NOM_MUN = toupper(NOM_MUN)) %>% 
+  mutate(NOM_LOC = stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC))
+
+#test for duplicates 
+dupes.inegi <- inegi.cost.comm.all %>% 
+  group_by(NOM_ENT, NOM_LOC) %>% 
+  mutate(dupe = dplyr::n()>1)
+
+georef.locs.all <- readr::read_csv(here::here("outputs","georef_locations.csv")) %>% 
   dplyr::rename(dec_lat_google = deci_lat, dec_lon_google = deci_lon)
+
+
+#test for duplicates 
+dupes.gc <- georef.locs.all %>% 
+  group_by(NOM_ENT, NOM_LOC) %>% 
+  mutate(dupe = dplyr::n()>1)
 
 #googlesheet to keep track of names that need correction
 #vulnerability_tables
@@ -131,6 +244,7 @@ googlesheets4::gs4_deauth()
    distinct(NOM_LOC, NOM_ENT, NOM_LOC_REV, NOM_ENT_REV) %>% 
    keep_when(!is.na(NOM_LOC_REV))
 
+ 
 #georeferrenced rnp
 permit.locs.geo <-readr::read_csv(here::here("outputs","rnp_fishery_permits.csv"))
 
@@ -138,14 +252,24 @@ permit.locs.geo <-readr::read_csv(here::here("outputs","rnp_fishery_permits.csv"
 ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
 coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
 
-permit.locs.geo <- readr::read_csv(here::here("outputs","rnp_fishery_permits.csv"))
+permit.locs.geo <- readr::read_csv(here::here("outputs","rnp_fishery_permits.csv")) %>% 
+  select(rnp_code, NOM_ENT, NOM_LOC, deci_lat, deci_lon)
 
 catch.files <- list.files(path = here::here("data-raw","fisheries_data"), full.names = TRUE)
 no.catchfiles <- 1:length(catch.files)
 
-#match to rnpa number
+#get unique georreferenced rnp codes
 
-catch.rnpa <- lapply(no.catchfiles, get_rnpa_catch, catch.files, coast.selecc, permit.locs.geo, georef.locs.gc) 
+catch.rnpa <- lapply(no.catchfiles, get_rnpa_catch, catch.files, coast.selecc, locs.pesca, permit.locs.geo, inegi.cost.comm.all, georef.locs.all) 
+
+catch.rnpa.codes <- catch.rnpa %>%
+  dplyr::bind_rows() %>% 
+  dplyr::bind_rows(permit.locs.geo) %>%
+  distinct(rnp_code, NOM_ENT, NOM_LOC, deci_lat, deci_lon)
+
+catch.rnpa.codes %>% dplyr::arrange(NOM_ENT, NOM_LOC) %>% View()
+
+
 
 ```
 
@@ -155,7 +279,7 @@ Georreference landing records
 
 permit.locs.geo <- readr::read_csv(here::here("outputs","rnp_fishery_permits.csv"))
 
-georef.locs.gc <- readr::read_csv(here::here("outputs","georef_locations.csv")) %>% 
+georef.locs.all <- readr::read_csv(here::here("outputs","georef_locations.csv")) %>% 
   dplyr::rename(dec_lat_google = deci_lat, dec_lon_google = deci_lon)
 
 
@@ -166,7 +290,7 @@ no.catchfiles <- 1:length(catch.files)
 
 #match to rnpa number
 
-catch.rnpa <- lapply(no.catchfiles,get_rnpa_catch, catch.files, coast.selecc, permit.locs.geo, georef.locs.gc) 
+catch.rnpa <- lapply(no.catchfiles,get_rnpa_catch, catch.files, coast.selecc, permit.locs.geo, georef.locs.all) 
 
 rnpa.catch.table <- catch.rnpa %>%
   dplyr::bind_rows() %>% 
@@ -205,7 +329,6 @@ locs.pesca <- googlesheets4::read_sheet("1eJXjwlHqEzSAZaTmE_XyN93fu6EI0I8igRH4Ad
 ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco", "Yucatán", "Campeche", "Quintana Roo"))
 coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
 coast.selecc.pac <- c("BAJA CALIFORNIA SUR","BAJA CALIFORNIA","SONORA","SINALOA","NAYARIT","JALISCO")
-
 
 
 #all coastal communities, including those with no census data

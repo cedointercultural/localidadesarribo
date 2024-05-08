@@ -11,8 +11,11 @@
 #' @export
 #'
 #' @examples
-get_rnpa_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca, permit.locs.geo, inegi.cost.comm.all){
+get_rnpa_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca, permit.locs.geo, inegi.cost.comm.all, georef.locs.gc){
 
+  this.catchfile <- catch.files[this.catchfileno]
+  print(this.catchfile)
+  
   rnp.codes <- unique(permit.locs.geo$rnp_code)
   
   correct.ent <- locs.pesca %>%
@@ -21,11 +24,7 @@ get_rnpa_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pes
   correct.loc <- locs.pesca %>%
     select(-NOM_ENT_REV) 
   
-  
-  this.catchfile <- catch.files[this.catchfileno]
-  print(this.catchfile)
-
-  if(grepl("xlsx", this.catchfile)){
+   if(grepl("xlsx", this.catchfile)){
 
     catch.file <- readxl::read_xlsx(this.catchfile)
 
@@ -62,11 +61,14 @@ get_rnpa_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pes
   
   
   rnp.uncoded <- catch.file.small %>%
+    mutate(rnp_code = as.character(rnp_code)) %>%
     dplyr::filter(!rnp_code %in% rnp.codes) %>% 
     dplyr::select(NOM_ENT, NOM_LOC, rnp_code) %>%
     keep_when(rnp_code !="9999999999", NOM_LOC !="NO CONSIDERADO") %>% 
     distinct(NOM_ENT, NOM_LOC, rnp_code) %>% 
     mutate(NOM_LOC= gsub("Ã‘", "N", NOM_LOC))
+  
+  print(colnames(rnp.uncoded))
   
   this.permit.corr <- rnp.uncoded %>%
     dplyr::left_join(correct.ent, by =c("NOM_LOC","NOM_ENT")) %>%
