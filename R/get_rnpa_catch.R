@@ -16,8 +16,6 @@ get_rnpa_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pes
   this.catchfile <- catch.files[this.catchfileno]
   print(this.catchfile)
   
-  rnp.codes <- unique(permit.locs.geo$rnp_code)
-  
   correct.ent <- locs.pesca %>%
     select(-NOM_LOC_REV)
   
@@ -62,7 +60,6 @@ get_rnpa_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pes
   
   rnp.uncoded <- catch.file.small %>%
     mutate(rnp_code = as.character(rnp_code)) %>%
-    dplyr::filter(!rnp_code %in% rnp.codes) %>% 
     dplyr::select(NOM_ENT, NOM_LOC, rnp_code) %>%
     keep_when(rnp_code !="9999999999", NOM_LOC !="NO CONSIDERADO") %>% 
     distinct(NOM_ENT, NOM_LOC, rnp_code) %>% 
@@ -77,20 +74,15 @@ get_rnpa_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pes
     mutate(NOM_LOC = dplyr::if_else(!is.na(NOM_LOC_REV), NOM_LOC_REV, NOM_LOC)) %>% 
     select(-NOM_LOC_REV, -NOM_ENT_REV)
   
-  this.permit.inegi <- this.permit.corr %>% 
-    dplyr::left_join(inegi.cost.comm.all, by =c("NOM_ENT","NOM_LOC")) %>% 
-    select(rnp_code, NOM_ENT, NOM_MUN, NOM_LOC, CVE_LOC, CVE_MUN, CVE_ENT, deci_lat, deci_lon)
-  
-  this.permit.inegi.locs <- this.permit.inegi %>%
-    keep_when(is.na(deci_lat)) %>% 
-    select(-deci_lat, -deci_lon) %>% 
+  this.permit.inegi.locs <- this.permit.corr %>%
     dplyr::left_join(georef.locs.gc, by = c("NOM_ENT", "NOM_LOC")) %>% 
-    dplyr::rename(deci_lat = dec_lat_google, deci_lon = dec_lon_google) %>%
     keep_when(!is.na(deci_lat)) %>% 
     select(rnp_code, NOM_ENT, NOM_LOC, deci_lat, deci_lon)
   
-  permit.inegi.locs.geo <- this.permit.inegi %>%
-    keep_when(!is.na(deci_lat))  %>% 
+  rnp.codes.geo <- unique(this.permit.inegi.locs$rnp_code)
+  
+  permit.inegi.locs.geo <- permit.locs.geo %>%
+    keep_when(!rnp_code %in% rnp.codes.geo)  %>% 
     select(rnp_code, NOM_ENT, NOM_LOC, deci_lat, deci_lon) %>% 
     dplyr::bind_rows(this.permit.inegi.locs) %>% 
     distinct(rnp_code, NOM_ENT, NOM_LOC, deci_lat, deci_lon)

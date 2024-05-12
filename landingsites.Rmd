@@ -21,12 +21,54 @@ lapply(.packages, require, character.only=TRUE)
 #use this for packages
 #specifies what functions to import
 # https://cran.r-project.org/web/packages/import/vignettes/import.html
-import::from(dplyr, mutate, distinct, select, group_by, summarise, keep_when = filter)
+import::from(dplyr, mutate, distinct, select, group_by, summarise, keep_when = filter, rename)
 
 ```
 
+#Get fishery offices from catch records
+```{r}
+
+locs.pesca <- googlesheets4::read_sheet("1eJXjwlHqEzSAZaTmE_XyN93fu6EI0I8igRH4AdvXOl8") %>% 
+  mutate(NOM_LOC= stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
+  mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
+  mutate(NOM_LOC_REV= stringi::stri_trans_general(str = NOM_LOC_REV, id = "Latin-ASCII"), NOM_LOC_REV = toupper(NOM_LOC_REV)) %>% 
+  mutate(NOM_ENT_REV= stringi::stri_trans_general(str = NOM_ENT_REV, id = "Latin-ASCII"), NOM_ENT_REV = toupper(NOM_ENT_REV)) %>%
+   distinct(NOM_LOC, NOM_ENT, NOM_LOC_REV, NOM_ENT_REV) %>% 
+   keep_when(!is.na(NOM_LOC_REV))
+
+ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
+coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
+
+catch.files <- list.files(path = here::here("data-raw","fisheries_data"), full.names = TRUE)
+no.catchfiles <- 1:length(catch.files)
+
+#get unique georreferenced rnp codes
+
+data("inegigc")
+
+fishery.offices.list <- lapply(no.catchfiles, get_fishery_office_catch, catch.files, coast.selecc, inegigc, locs.pesca) 
+
+fishery.office.table <- fishery.offices.list %>% 
+  dplyr::bind_rows() %>% 
+  distinct(NOM_ENT, NOM_LOC, NOM_MUN, CVE_ENT, CVE_MUN, CVE_LOC, deci_lon, deci_lat) 
+
+fishery.spatial <- sf::st_as_sf(fishery.office.table, coords = c("deci_lon", "deci_lat"), crs = 4326) 
+
+fishery.spatial %>% 
+  sf::st_write(here::here("outputs","fishery_offices.shp"))
+
+readr::write_csv(fishery.office.table, here::here("outputs","fishery_offices.csv"))
+
+
+
+
+
+```
+
+
+
 #Create table georeferrenced locations
-```{r location table, echo=FALSE}
+```{r location table, include=FALSE}
 googlesheets4::gs4_deauth()
 #googlesheet to keep track of names that need correction
 #vulnerability_tables
@@ -111,50 +153,26 @@ georef.locs.sp <- georef.locs %>%
 
 #Add distance to nearest fishery office to help resolve duplicates when georreferincing a catch 
 
-fishery.offices <- sf::st_read(here::here("data-raw","conapesca_offices","offices_wgs84.shp")) %>%   sf::st_transform(crs = 4326) %>% 
-  sf::st_centroid() %>% 
-  mutate(FED_ENTITY = dplyr::if_else(FED_ENTITY == "BAJA CALIFORNIA NORTE", "BAJA CALIFORNIA", FED_ENTITY)) %>% 
-    keep_when(FED_ENTITY %in% coast.selecc)
+fishery.offices <- sf::st_read(here::here("outputs","fishery_offices.shp")) %>%   sf::st_transform(crs = 4326) %>% 
+  sf::st_centroid() 
 
-fishery.names <- fishery.offices %>% 
-  sf::st_drop_geometry() %>%
-  select(FED_ENTITY, OFFICE) %>%
-  mutate(NOM_ENT = FED_ENTITY, NOM_LOC = OFFICE)
- 
-fishery.correct.loc <- fishery.names %>%
-   dplyr::left_join(correct.ent, by =c("NOM_LOC","NOM_ENT")) %>%
-    mutate(NOM_ENT = dplyr::if_else(!is.na(NOM_ENT_REV), NOM_ENT_REV, NOM_ENT)) %>%
-    dplyr::left_join(correct.loc, by =c("NOM_LOC","NOM_ENT")) %>%
-    mutate(NOM_LOC = dplyr::if_else(!is.na(NOM_LOC_REV), NOM_LOC_REV, NOM_LOC)) %>% 
-  select(-NOM_LOC_REV, -NOM_ENT_REV) %>% 
-  dplyr::left_join(locs.census, by = c("NOM_LOC","NOM_ENT")) 
+num.georef.locs <- 1:nrow(georef.locs.sp)
+
+georef.locs.dist <- lapply(num.georef.locs, get_distance, fishery.offices) %>% 
+  dplyr::bind_rows() 
 
 
-fishery.distance <- fishery.offices %>% 
-  sf::st_distance(georef.locs.sp) %>% 
-  sf::st_as_sf() %>% 
-  sf::st_set_crs(4326) %>% 
-  sf::st_set_geometry(NULL) %>% 
-  dplyr::mutate(dist_fishery = .) %>% 
-  dplyr::bind_cols(georef.locs) %>% 
-  dplyr::select(NOM_ENT, NOM_LOC, deci_lat, deci_lon, dist_fishery) %>% 
-  dplyr::arrange(NOM_ENT, NOM_LOC) %>% 
-  readr::write_csv(here::here("outputs","georef_locations.csv"))
+georef.locs.km <- georef.locs.dist %>% 
+  mutate(distance_km = distance / 1000)
 
-
-georef.locs.all <- georef.locs %>%
-  keep_when(NOM_ENT %in% coast.selecc) %>% 
-  group_by(NOM_ENT, NOM_LOC) %>%
-  summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon))
-
-readr::write_csv(georef.locs.all, here::here("outputs","georef_locations.csv"))
+readr::write_csv(georef.locs.km, here::here("outputs","georef_locations.csv"))
 
 
 ```
 
 
 
-Extract permit information from the Registro Nacional de Pesca y Acuacultura RNPA 
+Get permit information from the Registro Nacional de Pesca y Acuacultura RNPA and georreference
 https://www.gob.mx/conapesca/documentos/registro-nacional-de-pesca-y-acuacultura-rnpa
 
 ```{r get catch, message=TRUE, warning=TRUE, include=FALSE}
@@ -208,29 +226,9 @@ readr::write_csv(permit.locs.geo, here::here("outputs","rnp_fishery_permits.csv"
 Get RNP codes from catch records and georreferrence
 ```{r}
 
-#all coastal communities, including those with no census data
-inegi.cost.comm.all  <- readr::read_csv(here::here("data-raw","all_coastal_communities_INEGI.csv")) %>% 
-  mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
-  mutate(NOM_MUN = stringi::stri_trans_general(str = NOM_MUN, id = "Latin-ASCII"), NOM_MUN = toupper(NOM_MUN)) %>% 
-  mutate(NOM_LOC = stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC))
-
-#test for duplicates 
-dupes.inegi <- inegi.cost.comm.all %>% 
-  group_by(NOM_ENT, NOM_LOC) %>% 
-  mutate(dupe = dplyr::n()>1)
-
-georef.locs.all <- readr::read_csv(here::here("outputs","georef_locations.csv")) %>% 
-  dplyr::rename(dec_lat_google = deci_lat, dec_lon_google = deci_lon)
+georef.locs.km <- readr::read_csv(here::here("outputs","georef_locations.csv"))
 
 
-#test for duplicates 
-dupes.gc <- georef.locs.all %>% 
-  group_by(NOM_ENT, NOM_LOC) %>% 
-  mutate(dupe = dplyr::n()>1)
-
-#googlesheet to keep track of names that need correction
-#vulnerability_tables
-    
 googlesheets4::gs4_deauth()
 
  locs.pesca <- googlesheets4::read_sheet("1eJXjwlHqEzSAZaTmE_XyN93fu6EI0I8igRH4AdvXOl8") %>% 
@@ -240,24 +238,20 @@ googlesheets4::gs4_deauth()
   mutate(NOM_ENT_REV= stringi::stri_trans_general(str = NOM_ENT_REV, id = "Latin-ASCII"), NOM_ENT_REV = toupper(NOM_ENT_REV)) %>%
    distinct(NOM_LOC, NOM_ENT, NOM_LOC_REV, NOM_ENT_REV) %>% 
    keep_when(!is.na(NOM_LOC_REV))
-
  
-#georeferrenced rnp
-permit.locs.geo <-readr::read_csv(here::here("outputs","rnp_fishery_permits.csv"))
-
- 
-ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
-coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
-
+#georeferrenced rnp from lists of fishery permit 
 permit.locs.geo <- readr::read_csv(here::here("outputs","rnp_fishery_permits.csv")) %>% 
   select(rnp_code, NOM_ENT, NOM_LOC, deci_lat, deci_lon)
+
+ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
+coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
 
 catch.files <- list.files(path = here::here("data-raw","fisheries_data"), full.names = TRUE)
 no.catchfiles <- 1:length(catch.files)
 
 #get unique georreferenced rnp codes
 
-catch.rnpa <- lapply(no.catchfiles, get_rnpa_catch, catch.files, coast.selecc, locs.pesca, permit.locs.geo, inegi.cost.comm.all, georef.locs.all) 
+catch.rnpa <- lapply(no.catchfiles, get_rnpa_catch, catch.files, coast.selecc, locs.pesca, permit.locs.geo, inegi.cost.comm.all, georef.locs.km) 
 
 catch.rnpa.codes <- catch.rnpa %>%
   dplyr::bind_rows() %>% 
