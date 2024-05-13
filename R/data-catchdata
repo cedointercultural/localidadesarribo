@@ -1,0 +1,15 @@
+#' @title DATASET_TITLE
+#' @description DATASET_DESCRIPTION
+#' @format A data frame with 2629445 rows and 8 variables:
+#' \describe{
+#'   \item{\code{rnp_code}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{NOM_ENT}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{NOM_LOC}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{fishery_office}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{species}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{landed_w_kg}}{double COLUMN_DESCRIPTION}
+#'   \item{\code{value_mxn}}{double COLUMN_DESCRIPTION}
+#'   \item{\code{year}}{double COLUMN_DESCRIPTION} 
+#'}
+#' @details DETAILS
+"catchdata"

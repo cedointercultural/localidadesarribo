@@ -25,8 +25,15 @@ import::from(dplyr, mutate, distinct, select, group_by, summarise, keep_when = f
 
 ```
 
-#Get fishery offices from catch records
-```{r}
+Get catch from official record. 
+Filter out catch for artisanal fisheries and eliminate aquaculture production.
+Uses table with corrected names to standarize names of locations and fishery offices and correct incorrect state names.
+Combines catch files for all years and selects landing site, state, fishery office, species, weight, and catch value.
+Resulting data is imported as catch rmd into the package
+
+Need to add separation of sites that are closer on the Pacific Coast that the Gulf after the locations are georreferenced
+
+```{r get catch data, include=FALSE}
 
 locs.pesca <- googlesheets4::read_sheet("1eJXjwlHqEzSAZaTmE_XyN93fu6EI0I8igRH4AdvXOl8") %>% 
   mutate(NOM_LOC= stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
@@ -39,17 +46,50 @@ locs.pesca <- googlesheets4::read_sheet("1eJXjwlHqEzSAZaTmE_XyN93fu6EI0I8igRH4Ad
 ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
 coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
 
-catch.files <- list.files(path = here::here("data-raw","fisheries_data"), full.names = TRUE)
+catch.files <- list.files(path = here::here("data-raw","original_fisheries_data"), full.names = TRUE)
 no.catchfiles <- 1:length(catch.files)
+
+#NOTE: There are 16,531 records between 2000-2004 with 0 price for catch
+
+lapply(no.catchfiles, get_catch, catch.files, coast.selecc, locs.pesca)
+
+catch.files.clean <- list.files(path = here::here("data-raw","fisheries_data"), full.names = TRUE)
+no.catchfiles.clean <- 1:length(catch.files.clean)
+
+catchdata <- lapply(no.catchfiles.clean, clean_catch, catch.files.clean) %>% 
+  dplyr::bind_rows()
+
+usethis::use_data(catchdata, overwrite = TRUE)
+#creates template describing the data
+data.description <-sinew::makeOxygen(catchdata)
+cat(data.description, file=here::here("R",paste0("data-","catchdata")))
+
+#rebuild and load the package
+devtools::load_all() # restarts and loads
+
+
+```
+
+
+Gets list of fishery offices from catch records
+Uses standarized catch data to get unique fishery offices and georreference them
+```{r}
+
+locs.pesca <- clean_locs_pesca()
 
 #get unique georreferenced rnp codes
 
 data("inegigc")
+data("catchdata")
 
-fishery.offices.list <- lapply(no.catchfiles, get_fishery_office_catch, catch.files, coast.selecc, inegigc, locs.pesca) 
+fishery.offices.list <- get_fishery_office_catch(catchdata) 
 
 fishery.office.table <- fishery.offices.list %>% 
   dplyr::bind_rows() %>% 
+  distinct(NOM_LOC, NOM_ENT)
+
+#Continue here, there are offices that don't correspond to the state listed because the state is for the landing site and not for the office and some catch has been landed in a far office
+fishery.office.locs <- fishery.office.table %>% 
   distinct(NOM_ENT, NOM_LOC, NOM_MUN, CVE_ENT, CVE_MUN, CVE_LOC, deci_lon, deci_lat) 
 
 fishery.spatial <- sf::st_as_sf(fishery.office.table, coords = c("deci_lon", "deci_lat"), crs = 4326) 
@@ -65,6 +105,34 @@ readr::write_csv(fishery.office.table, here::here("outputs","fishery_offices.csv
 
 ```
 
+Get locations from catch records
+```{r}
+locs.pesca <- googlesheets4::read_sheet("1eJXjwlHqEzSAZaTmE_XyN93fu6EI0I8igRH4AdvXOl8") %>% 
+  mutate(NOM_LOC= stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
+  mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
+  mutate(NOM_LOC_REV= stringi::stri_trans_general(str = NOM_LOC_REV, id = "Latin-ASCII"), NOM_LOC_REV = toupper(NOM_LOC_REV)) %>% 
+  mutate(NOM_ENT_REV= stringi::stri_trans_general(str = NOM_ENT_REV, id = "Latin-ASCII"), NOM_ENT_REV = toupper(NOM_ENT_REV)) %>%
+   distinct(NOM_LOC, NOM_ENT, NOM_LOC_REV, NOM_ENT_REV) %>% 
+   keep_when(!is.na(NOM_LOC_REV))
+
+ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
+coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
+
+catch.files <- list.files(path = here::here("data-raw","fisheries_data"), full.names = TRUE)
+no.catchfiles <- 1:length(catch.files)
+
+
+#get unique georreferenced rnp codes
+
+data("inegigc")
+
+fishery.offices.list <- lapply(no.catchfiles, get_fishery_office_catch, catch.files, coast.selecc, inegigc, locs.pesca) 
+
+fishery.office.table <- fishery.offices.list %>% 
+  dplyr::bind_rows() %>% 
+  distinct(NOM_ENT, NOM_LOC, NOM_MUN, CVE_ENT, CVE_MUN, CVE_LOC, deci_lon, deci_lat) 
+
+```
 
 
 #Create table georeferrenced locations
@@ -158,7 +226,7 @@ fishery.offices <- sf::st_read(here::here("outputs","fishery_offices.shp")) %>% 
 
 num.georef.locs <- 1:nrow(georef.locs.sp)
 
-georef.locs.dist <- lapply(num.georef.locs, get_distance, fishery.offices) %>% 
+georef.locs.dist <- parallel::mclapply(num.georef.locs, get_distance, fishery.offices) %>% 
   dplyr::bind_rows() 
 
 
@@ -177,8 +245,7 @@ https://www.gob.mx/conapesca/documentos/registro-nacional-de-pesca-y-acuacultura
 
 ```{r get catch, message=TRUE, warning=TRUE, include=FALSE}
 
-georef.locs.all <- readr::read_csv(here::here("outputs","georef_locations.csv")) %>% 
-  dplyr::rename(dec_lat_google = deci_lat, dec_lon_google = deci_lon)
+georef.locs.km <- readr::read_csv(here::here("outputs","georef_locations.csv")) 
 
 
 #googlesheet to keep track of names that need correction
@@ -210,24 +277,22 @@ inegi.cost.mun <- inegi.cost.comm.all %>%
 permit.files <- list.files(path = here::here("data-raw","permit_data"), full.names = TRUE)
 no.permitfiles <- 1:length(permit.files)
 
-permit.data <- lapply(no.permitfiles, extract_permits, permit.files, inegi.cost.comm.all, coast.selecc, locs.pesca, georef.locs.all)
+permit.data <- lapply(no.permitfiles, extract_permits, permit.files, inegi.cost.comm.all, coast.selecc, locs.pesca, georef.locs.km)
 
 permit.data.rev <- permit.data %>% 
-  dplyr::bind_rows()
+  dplyr::bind_rows() %>% 
+  distinct(rnp_code, NOM_LOC, NOM_ENT, deci_lat, deci_lon, fishery_office, fishery_office_ent, distance_km)
 
-permit.locs.geo <- permit.data.rev %>% 
-  distinct(rnp_code, NOM_ENT, NOM_MUN, NOM_LOC, CVE_LOC, CVE_MUN, CVE_ENT, deci_lat, deci_lon) 
 
-readr::write_csv(permit.locs.geo, here::here("outputs","rnp_fishery_permits.csv"))
+readr::write_csv(permit.data.rev, here::here("outputs","rnp_fishery_permits.csv"))
 
 
 ```
 
-Get RNP codes from catch records and georreferrence
+Get RNP codes from catch records and georreference
 ```{r}
 
 georef.locs.km <- readr::read_csv(here::here("outputs","georef_locations.csv"))
-
 
 googlesheets4::gs4_deauth()
 
@@ -240,8 +305,11 @@ googlesheets4::gs4_deauth()
    keep_when(!is.na(NOM_LOC_REV))
  
 #georeferrenced rnp from lists of fishery permit 
-permit.locs.geo <- readr::read_csv(here::here("outputs","rnp_fishery_permits.csv")) %>% 
-  select(rnp_code, NOM_ENT, NOM_LOC, deci_lat, deci_lon)
+permit.locs.geo <- readr::read_csv(here::here("outputs","rnp_fishery_permits.csv")) 
+
+fishery.office.table <- readr::read_csv(here::here("outputs","fishery_offices.csv")) %>% 
+  rename(fishery_office_ent = NOM_ENT, fishery_office = NOM_LOC) %>%
+  select(fishery_office_ent, fishery_office, deci_lat, deci_lon)
 
 ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
 coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
@@ -251,12 +319,12 @@ no.catchfiles <- 1:length(catch.files)
 
 #get unique georreferenced rnp codes
 
-catch.rnpa <- lapply(no.catchfiles, get_rnpa_catch, catch.files, coast.selecc, locs.pesca, permit.locs.geo, inegi.cost.comm.all, georef.locs.km) 
+catch.rnpa <- lapply(no.catchfiles, get_rnpa_catch, catch.files, coast.selecc, locs.pesca, permit.locs.geo, georef.locs.km, fishery.office.table) 
 
 catch.rnpa.codes <- catch.rnpa %>%
   dplyr::bind_rows() %>% 
-  dplyr::bind_rows(permit.locs.geo) %>%
   distinct(rnp_code, NOM_ENT, NOM_LOC, deci_lat, deci_lon)
+   distinct(rnp_code, NOM_LOC, NOM_ENT, deci_lat, deci_lon, fishery_office, fishery_office_ent, distance_km)
 
 catch.rnpa.codes %>% dplyr::arrange(NOM_ENT, NOM_LOC) %>% View()
 

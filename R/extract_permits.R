@@ -17,7 +17,7 @@
 #' Extract permit with location information to match with catch records
 #' 
 extract_permits <- function(thispermitfile.no, permit.files, inegi.cost.comm.all, 
-                            coast.selecc, locs.pesca, georef.locs.gc){
+                            coast.selecc, locs.pesca, georef.locs.km){
 
   this.permitfile <- permit.files[thispermitfile.no]
 
@@ -127,26 +127,23 @@ extract_permits <- function(thispermitfile.no, permit.files, inegi.cost.comm.all
   this.permit.loc <- this.permit.data %>%
     dplyr::mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT), NOM_ENT = stringr::str_squish(NOM_ENT)) %>%
     dplyr::mutate(NOM_LOC = stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC), NOM_LOC = stringr::str_squish(NOM_LOC)) %>%
-    dplyr::mutate(NOM_LOC=gsub("A'", "N", NOM_LOC))
+    dplyr::mutate(NOM_LOC=gsub("A'", "N", NOM_LOC)) %>% 
+    dplyr::filter(NOM_ENT %in% coast.selecc) %>%
+    keep_when(!is.na(NOM_LOC)) %>%
+    distinct(rnp_code, NOM_ENT, NOM_LOC)
+    
 
   this.permit.corr <- this.permit.loc %>%
-    dplyr::left_join(correct.ent, by =c("NOM_LOC","NOM_ENT")) %>%
+     dplyr::left_join(correct.ent, by =c("NOM_LOC","NOM_ENT")) %>%
     mutate(NOM_ENT = dplyr::if_else(!is.na(NOM_ENT_REV), NOM_ENT_REV, NOM_ENT)) %>%
     dplyr::left_join(correct.loc, by =c("NOM_LOC","NOM_ENT")) %>%
-    mutate(NOM_LOC = dplyr::if_else(!is.na(NOM_LOC_REV), NOM_LOC_REV, NOM_LOC)) %>%
-    dplyr::filter(NOM_ENT %in% coast.selecc) 
+    mutate(NOM_LOC = dplyr::if_else(!is.na(NOM_LOC_REV), NOM_LOC_REV, NOM_LOC)) %>% 
+    select(-NOM_LOC_REV, -NOM_ENT_REV)
 
-  this.permit.inegi <- this.permit.corr %>% 
-    dplyr::left_join(inegi.cost.comm.all, by =c("NOM_ENT","NOM_LOC")) %>% 
-    select(rnp_code, NOM_LOC, NOM_MUN, NOM_ENT, CVE_LOC, CVE_MUN, CVE_ENT, deci_lat, deci_lon)
- 
-  this.permit.inegi.locs <- this.permit.inegi %>% 
-    dplyr::rename(dec_lat_inegi = deci_lat, dec_lon_inegi = deci_lon) %>%
-    dplyr::left_join(georef.locs.gc, by = c("NOM_ENT", "NOM_LOC")) %>% 
-    mutate(deci_lat = dplyr::if_else(is.na(dec_lat_inegi), dec_lat_google, dec_lat_inegi), 
-           deci_lon = dplyr::if_else(is.na(dec_lon_inegi), dec_lon_google, dec_lon_inegi)) %>% 
-    keep_when(!is.na(rnp_code) & !is.na(deci_lat) & !is.na(deci_lon)) %>% 
-    distinct(rnp_code, NOM_LOC, NOM_MUN, NOM_ENT, CVE_LOC, CVE_MUN, CVE_ENT, deci_lat, deci_lon)
+  this.permit.inegi.locs <- this.permit.corr %>% 
+      dplyr::left_join(georef.locs.km, by = c("NOM_ENT", "NOM_LOC")) %>% 
+     keep_when(!is.na(rnp_code) & !is.na(deci_lat) & !is.na(deci_lon)) %>% 
+    distinct(rnp_code, NOM_LOC, NOM_ENT, deci_lat, deci_lon, fishery_office, fishery_office_ent, distance_km)
   
  # this.permit.inegi.locs %>% View()
   

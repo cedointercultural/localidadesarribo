@@ -10,8 +10,8 @@ get_rnpa_catch(
   coast.selecc,
   locs.pesca,
   permit.locs.geo,
-  inegi.cost.comm.all,
-  georef.locs.gc
+  georef.locs.km,
+  fishery.office.table
 )
 
 get_rnpa_catch(
@@ -20,8 +20,8 @@ get_rnpa_catch(
   coast.selecc,
   locs.pesca,
   permit.locs.geo,
-  inegi.cost.comm.all,
-  georef.locs.gc
+  georef.locs.km,
+  fishery.office.table
 )
 }
 \arguments{
@@ -33,7 +33,9 @@ get_rnpa_catch(
 
 \item{permit.locs.geo}{geolocated permits}
 
-\item{inegi.cost.comm.all}{INEGI coastal communities}
+\item{georef.locs.km}{georreferenced locations}
+
+\item{fishery.office.table}{INEGI coastal communities}
 }
 \value{
 catch.file.rnp

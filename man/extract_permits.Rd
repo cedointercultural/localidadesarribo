@@ -10,7 +10,7 @@ extract_permits(
   inegi.cost.comm.all,
   coast.selecc,
   locs.pesca,
-  georef.locs.gc
+  georef.locs.km
 )
 }
 \arguments{
