@@ -35,29 +35,27 @@ Need to add separation of sites that are closer on the Pacific Coast that the Gu
 
 ```{r get catch data, include=FALSE}
 
-locs.pesca <- googlesheets4::read_sheet("1eJXjwlHqEzSAZaTmE_XyN93fu6EI0I8igRH4AdvXOl8") %>% 
-  mutate(NOM_LOC= stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
-  mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
-  mutate(NOM_LOC_REV= stringi::stri_trans_general(str = NOM_LOC_REV, id = "Latin-ASCII"), NOM_LOC_REV = toupper(NOM_LOC_REV)) %>% 
-  mutate(NOM_ENT_REV= stringi::stri_trans_general(str = NOM_ENT_REV, id = "Latin-ASCII"), NOM_ENT_REV = toupper(NOM_ENT_REV)) %>%
-   distinct(NOM_LOC, NOM_ENT, NOM_LOC_REV, NOM_ENT_REV) %>% 
-   keep_when(!is.na(NOM_LOC_REV))
+locs.pesca <- clean_locs_pesca()
 
 ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
 coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
 
-catch.files <- list.files(path = here::here("data-raw","original_fisheries_data"), full.names = TRUE)
+#Currently only using data 2018-2023, other data have too many inconsistencies
+#catch.files <- list.files(path = here::here("data-raw","original_fisheries_data"), full.names = TRUE)
+catch.files <- list.files(path = here::here("data-raw","original_fisheries_data"), full.names = TRUE, pattern = "2018|2019|2020|2021|2022|2023")
+
 no.catchfiles <- 1:length(catch.files)
 
 #NOTE: There are 16,531 records between 2000-2004 with 0 price for catch
 
-lapply(no.catchfiles, get_catch, catch.files, coast.selecc, locs.pesca)
+parallel::mclapply(no.catchfiles, get_catch, catch.files, coast.selecc, locs.pesca)
 
 catch.files.clean <- list.files(path = here::here("data-raw","fisheries_data"), full.names = TRUE)
 no.catchfiles.clean <- 1:length(catch.files.clean)
 
 catchdata <- lapply(no.catchfiles.clean, clean_catch, catch.files.clean) %>% 
-  dplyr::bind_rows()
+  dplyr::bind_rows() %>% 
+  mutate(catch_id = paste0("catch_",1:nrow(.)))
 
 usethis::use_data(catchdata, overwrite = TRUE)
 #creates template describing the data
@@ -86,11 +84,10 @@ fishery.offices.list <- get_fishery_office_catch(catchdata)
 
 fishery.office.table <- fishery.offices.list %>% 
   dplyr::bind_rows() %>% 
-  distinct(NOM_LOC, NOM_ENT)
+  distinct(NOM_LOC, NOM_ENT) %>% 
+  dplyr::arrange(NOM_LOC,NOM_ENT)
 
 #Continue here, there are offices that don't correspond to the state listed because the state is for the landing site and not for the office and some catch has been landed in a far office
-fishery.office.locs <- fishery.office.table %>% 
-  distinct(NOM_ENT, NOM_LOC, NOM_MUN, CVE_ENT, CVE_MUN, CVE_LOC, deci_lon, deci_lat) 
 
 fishery.spatial <- sf::st_as_sf(fishery.office.table, coords = c("deci_lon", "deci_lat"), crs = 4326) 
 

@@ -4,14 +4,14 @@
 \alias{get_fishery_office_catch}
 \title{Get fishery office from catch records}
 \usage{
-get_fishery_office_catch(catchdata, inegigc)
+get_fishery_office_catch(catchdata)
 }
 \arguments{
-\item{inegigc}{all communities in Gulf of California coastal states}
-
 \item{catch.files}{catch files}
 
 \item{coast.selecc}{selected coastal states}
+
+\item{inegigc}{all communities in Gulf of California coastal states}
 
 \item{locs.pesca}{corrected location names}
 }

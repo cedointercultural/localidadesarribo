@@ -23,8 +23,39 @@ get_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca){
   
   if(grepl("xlsx", this.catchfile)){
     
-    catch.file <- readxl::read_xlsx(this.catchfile)
+    these.sheets <- readxl::excel_sheets(this.catchfile)
+    print(these.sheets)
     
+    if(length(these.sheets)>1){
+      
+      catch.sm.sheets <- grep("MEN", these.sheets, value = TRUE)
+      
+      catch.this.file <- list()
+      
+      for(i in 1:length(catch.sm.sheets)){
+        
+        this.excel.catch <- readxl::read_xlsx(this.catchfile, sheet=catch.sm.sheets[i])
+        
+        if("ZONA" %in% colnames(this.excel.catch)){
+          
+          this.excel.catch <- this.excel.catch %>% 
+            select(-ZONA)
+          
+        } 
+        
+        print(colnames(this.excel.catch))
+        
+        catch.this.file[[i]] <- this.excel.catch
+      }
+      
+      catch.file <- do.call(rbind, catch.this.file)
+      
+         
+    } else {
+      
+      catch.file <- readxl::read_xlsx(this.catchfile)
+    }
+  
   } else if(grepl("csv", this.catchfile)){
     
     catch.file <- data.table::fread(this.catchfile, skip=2)
@@ -69,9 +100,6 @@ get_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca){
   
   rnp.uncoded <- catch.file.small %>%
     keep_when(NOM_ENT %in% coast.selecc) %>% 
-    mutate(fishery_office= stringi::stri_trans_general(str = fishery_office, id = "Latin-ASCII"), fishery_office = toupper(fishery_office)) %>% 
-    mutate(NOM_LOC= stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
-    mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
     mutate(NOM_LOC= gsub("Ã‘", "N", NOM_LOC),
            NOM_LOC= gsub("A'", "N", NOM_LOC),
            fishery_office = gsub("Ã‘", "N", fishery_office), 
@@ -84,6 +112,7 @@ get_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca){
     dplyr::left_join(correct.loc, by =c("NOM_LOC","NOM_ENT")) %>%
     mutate(NOM_LOC = dplyr::if_else(!is.na(NOM_LOC_REV), NOM_LOC_REV, NOM_LOC)) %>% 
     select(-NOM_LOC_REV, -NOM_ENT_REV) 
+      
   
   correct.loc.fishery <- locs.pesca %>%
     select(-NOM_ENT_REV, -NOM_ENT) %>% 
@@ -96,10 +125,16 @@ get_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca){
     select(-NOM_LOC_REV) %>% 
     keep_when(NOM_LOC!="NO CONSIDERADO") %>%
     keep_when(!grepl("(CULT)",NOM_LOC)) %>%
-    keep_when(!grepl("(CULT\\.)",NOM_LOC))
+    keep_when(!grepl("(CULT\\.)",NOM_LOC)) 
+  
+  fishery.catch.locs <- this.catch.locs %>% 
+    mutate(fishery_office= stringi::stri_trans_general(str = fishery_office, id = "Latin-ASCII"), fishery_office = toupper(fishery_office)) %>% 
+    mutate(NOM_LOC= stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
+    mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT))
+  
     
               
-  data.table::fwrite(this.catch.locs, here::here("data-raw","fisheries_data",paste0("catch_file_",this.catchfileno,".csv")))
+  data.table::fwrite(fishery.catch.locs, here::here("data-raw","fisheries_data",paste0("catch_file_",this.catchfileno,".csv")))
   
  
 }
