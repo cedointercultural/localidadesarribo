@@ -1,0 +1,18 @@
+#' @title DATASET_TITLE
+#' @description DATASET_DESCRIPTION
+#' @format A data frame with 58 rows and 11 variables:
+#' \describe{
+#'   \item{\code{NOM_LOC}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{NOM_ENT}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{NOM_MUN}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{CVE_ENT}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{CVE_MUN}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{CVE_LOC}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{POBTOT}}{double COLUMN_DESCRIPTION}
+#'   \item{\code{POBFEM}}{double COLUMN_DESCRIPTION}
+#'   \item{\code{POBMAS}}{double COLUMN_DESCRIPTION}
+#'   \item{\code{deci_lon}}{double COLUMN_DESCRIPTION}
+#'   \item{\code{deci_lat}}{double COLUMN_DESCRIPTION} 
+#'}
+#' @details DETAILS
+"fisheryoffice"

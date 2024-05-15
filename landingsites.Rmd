@@ -82,20 +82,30 @@ data("catchdata")
 
 fishery.offices.list <- get_fishery_office_catch(catchdata) 
 
+#fishery office list for 2024 is available here https://www.conapesca.gob.mx/work/sites/cona/dgppe/Subdelegaciones_de_Pesca.pdf
+#the La Reforma office is in the Municipality of Angostura and has CVE_LOC = 250020093
+#there are locations named La Reforma sites in Sinaloa so had to be extracted manually
+
 fishery.office.table <- fishery.offices.list %>% 
   dplyr::bind_rows() %>% 
-  distinct(NOM_LOC, NOM_ENT) %>% 
   dplyr::arrange(NOM_LOC,NOM_ENT)
-
-#Continue here, there are offices that don't correspond to the state listed because the state is for the landing site and not for the office and some catch has been landed in a far office
 
 fishery.spatial <- sf::st_as_sf(fishery.office.table, coords = c("deci_lon", "deci_lat"), crs = 4326) 
 
 fishery.spatial %>% 
-  sf::st_write(here::here("outputs","fishery_offices.shp"))
+  sf::st_write(here::here("outputs","fishery_offices.shp"), append=FALSE)
 
 readr::write_csv(fishery.office.table, here::here("outputs","fishery_offices.csv"))
 
+fisheryoffice <- fishery.office.table
+  
+usethis::use_data(fisheryoffice, overwrite = TRUE)
+#creates template describing the data
+data.description <-sinew::makeOxygen(fisheryoffice)
+cat(data.description, file=here::here("R",paste0("data-","fisheryoffice")))
+
+#rebuild and load the package
+devtools::load_all() # restarts and loads
 
 
 
@@ -104,47 +114,37 @@ readr::write_csv(fishery.office.table, here::here("outputs","fishery_offices.csv
 
 Get locations from catch records
 ```{r}
-locs.pesca <- googlesheets4::read_sheet("1eJXjwlHqEzSAZaTmE_XyN93fu6EI0I8igRH4AdvXOl8") %>% 
-  mutate(NOM_LOC= stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
-  mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
-  mutate(NOM_LOC_REV= stringi::stri_trans_general(str = NOM_LOC_REV, id = "Latin-ASCII"), NOM_LOC_REV = toupper(NOM_LOC_REV)) %>% 
-  mutate(NOM_ENT_REV= stringi::stri_trans_general(str = NOM_ENT_REV, id = "Latin-ASCII"), NOM_ENT_REV = toupper(NOM_ENT_REV)) %>%
-   distinct(NOM_LOC, NOM_ENT, NOM_LOC_REV, NOM_ENT_REV) %>% 
-   keep_when(!is.na(NOM_LOC_REV))
 
-ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
-coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
+locs.pesca <- clean_locs_pesca()
 
-catch.files <- list.files(path = here::here("data-raw","fisheries_data"), full.names = TRUE)
-no.catchfiles <- 1:length(catch.files)
-
-
-#get unique georreferenced rnp codes
+data("catchdata")
 
 data("inegigc")
 
-fishery.offices.list <- lapply(no.catchfiles, get_fishery_office_catch, catch.files, coast.selecc, inegigc, locs.pesca) 
+catch.locations.data <- get_locations_catch(catchdata) 
 
-fishery.office.table <- fishery.offices.list %>% 
-  dplyr::bind_rows() %>% 
-  distinct(NOM_ENT, NOM_LOC, NOM_MUN, CVE_ENT, CVE_MUN, CVE_LOC, deci_lon, deci_lat) 
+readr::write_csv(catch.locations.data, here::here("outputs","catch_locations.csv"))
+
+catchlocations <- catch.locations.data %>% 
+  dplyr::bind_rows() 
+
+usethis::use_data(catchlocations, overwrite = TRUE)
+#creates template describing the data
+data.description <-sinew::makeOxygen(catchlocations)
+cat(data.description, file=here::here("R",paste0("data-","catchlocations")))
+
+#rebuild and load the package
+devtools::load_all() # restarts and loads
+
 
 ```
 
 
-#Create table georeferrenced locations
+#Create table georeferrenced locations from INEGI & Google and add distance to nearest fishery office
+
 ```{r location table, include=FALSE}
-googlesheets4::gs4_deauth()
-#googlesheet to keep track of names that need correction
-#vulnerability_tables
-    
-locs.pesca <- googlesheets4::read_sheet("1eJXjwlHqEzSAZaTmE_XyN93fu6EI0I8igRH4AdvXOl8") %>% 
-  mutate(NOM_LOC= stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
-  mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
-  mutate(NOM_LOC_REV= stringi::stri_trans_general(str = NOM_LOC_REV, id = "Latin-ASCII"), NOM_LOC_REV = toupper(NOM_LOC_REV)) %>% 
-  mutate(NOM_ENT_REV= stringi::stri_trans_general(str = NOM_ENT_REV, id = "Latin-ASCII"), NOM_ENT_REV = toupper(NOM_ENT_REV)) %>%
-   distinct(NOM_LOC, NOM_ENT, NOM_LOC_REV, NOM_ENT_REV) %>% 
-   keep_when(!is.na(NOM_LOC_REV))
+
+locs.pesca <- clean_locs_pesca()
 
 correct.ent <- locs.pesca %>%
     select(-NOM_LOC_REV)
@@ -227,10 +227,29 @@ georef.locs.dist <- parallel::mclapply(num.georef.locs, get_distance, fishery.of
   dplyr::bind_rows() 
 
 
-georef.locs.km <- georef.locs.dist %>% 
+georeflocskm <- georef.locs.dist %>% 
   mutate(distance_km = distance / 1000)
 
-readr::write_csv(georef.locs.km, here::here("outputs","georef_locations.csv"))
+readr::write_csv(georeflocskm, here::here("outputs","georef_locations.csv"))
+
+usethis::use_data(georeflocskm, overwrite = TRUE)
+#creates template describing the data
+data.description <-sinew::makeOxygen(georeflocskm)
+cat(data.description, file=here::here("R",paste0("data-","georeflocskm")))
+
+#rebuild and load the package
+devtools::load_all() # restarts and loads
+
+```
+
+
+Georreference unique locations
+```{r}
+
+data("catchlocations")
+
+data("georeflocskm")
+
 
 
 ```

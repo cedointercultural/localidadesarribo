@@ -4,25 +4,13 @@
 \alias{get_locations_catch}
 \title{Get fishery office from catch records}
 \usage{
-get_locations_catch(
-  this.catchfileno,
-  catch.files,
-  coast.selecc,
-  inegigc,
-  locs.pesca
-)
+get_locations_catch(catchdata)
 }
 \arguments{
-\item{catch.files}{catch files}
-
-\item{coast.selecc}{selected coastal states}
-
-\item{inegigc}{all communities in Gulf of California coastal states}
-
-\item{locs.pesca}{corrected location names}
+\item{catchdata}{timeseries of catch for Gulf of California states}
 }
 \value{
-catch.file.rnp
+catch.locations
 }
 \description{
 Get fishery office from catch records

@@ -1,52 +1,21 @@
-georref_catch <- function(this.catchfileno, catch.files, coast.selecc, permit.locs.geo){
+georref_catch <- function(catchlocations, georeflocskm){
   
-  this.catchfile <- catch.files[this.catchfileno]
-  print(this.catchfile)
+  catch.code <- catchlocations %>% 
+    mutate(catch_code = paste(NOM_ENT, NOM_LOC, fishery_office, sep="_"))
   
-  if(grepl("xlsx", this.catchfile)){
-    
-    catch.file <- readxl::read_xlsx(this.catchfile)
-    
-  } else if(grepl("csv", this.catchfile)){
-    
-    catch.file <- data.table::fread(this.catchfile, skip =2)
-  }
+  locs.catch.geo <- catch.code %>% 
+    dplyr::left_join(georeflocskm, by = c("NOM_ENT", "NOM_LOC","fishery_office")) %>% 
+    dplyr::distinct(catch_code, rnp_code, NOM_LOC, NOM_ENT, deci_lat, deci_lon, fishery_office, fishery_office_ent, distance_km)
   
+  geo.codes <- locs.catch.geo %>% 
+    keep_when(!is.na(deci_lon)) %>% 
+    dplyr::distinct(catch_code) %>% 
+    dplyr::pull(catch_code)
+
+  locs.catch.nooffice <- catch.code %>% 
+    kep_when(!catch_code %in% geo.codes) %>% 
+    dplyr::left_join(georeflocskm, by = c("NOM_ENT", "NOM_LOC")) %>% 
   
-  if("TIPOAVISO" %in% colnames(catch.file)){
-    
-    catch.file.small <- catch.file %>%
-      dplyr::rename(NOM_ENT= NOMBREESTADO, NOM_LOC= NOMBRESITIODESEMBARQUE, rnp_code = RNPAUNIDADECONOMICA) %>%
-      keep_when(TIPOAVISO=="MENORES") %>% 
-      keep_when(NOM_ENT %in% coast.selecc)
-    
-    catch.file.rnp <- catch.file.small %>%
-      dplyr::left_join(permit.locs.geo, by = c("rnp_code","NOM_LOC","NOM_ENT"))
-  }
-  
-  
-  catch.file.rnp <- catch.file %>%
-    dplyr::filter(`NOMBRE ESTADO` %in% coast.selecc) %>%
-    dplyr::group_by(`RNPA UNIDAD ECONOMICA`,`NOMBRE PRINCIPAL`,`NOMBRE ESPECIE`,`AÑO CORTE`) %>%
-    dplyr::summarise(tot_weight_kg=sum(`PESO DESEMBARCADO_KILOGRAMOS`), tot_value_pesos=sum(VALOR_PESOS)) %>%
-    dplyr::ungroup() %>%
-    dplyr::rename(rnp_code=`RNPA UNIDAD ECONOMICA`, catch_name = `NOMBRE PRINCIPAL`, sp_name = `NOMBRE ESPECIE`, year = `AÑO CORTE`)
-  
-  catch.file.rnp <- catch.file %>%
-    dplyr::filter(`NOMBRE ESTADO` %in% coast.selecc) %>%
-    dplyr::group_by(`RNPA UNIDAD ECONOMICA`,`NOMBRE PRINCIPAL`,`NOMBRE ESPECIE`,`AÑO CORTE`) %>%
-    dplyr::summarise(tot_weight_kg=sum(`PESO DESEMBARCADO_KILOGRAMOS`), tot_value_pesos=sum(VALOR_PESOS)) %>%
-    dplyr::ungroup() %>%
-    dplyr::rename(rnp_code=`RNPA UNIDAD ECONOMICA`, catch_name = `NOMBRE PRINCIPAL`, sp_name = `NOMBRE ESPECIE`, year = `AÑO CORTE`)
-  
-  if(this.catchfileno==1){
-    data.table::fwrite(catch.file.rnp, here::here("outputs","catch_files","sonora_conapesca_2000-2023"), append = FALSE)
-    
-  } else if(this.catchfileno>1){
-    data.table::fwrite(catch.file.rnp, here::here("outputs","catch_files","sonora_conapesca_2000-2023"), append = TRUE)
-  }
-  
-  
-  return(catch.file.rnp)
+  return(locs.catch.geo)
   
 }
