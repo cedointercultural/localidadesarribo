@@ -99,9 +99,9 @@ get_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca){
   }
   
   rnp.uncoded <- catch.file.small %>%
-    keep_when(NOM_ENT %in% coast.selecc) %>% 
-    mutate(NOM_LOC= gsub("Ã‘", "N", NOM_LOC),
+     mutate(NOM_LOC= gsub("Ã‘", "N", NOM_LOC),
            NOM_LOC= gsub("A'", "N", NOM_LOC),
+           NOM_LOC= gsub("\\?", "N", NOM_LOC),
            fishery_office = gsub("Ã‘", "N", fishery_office), 
            species = gsub("Ã‘", "N", species)) %>% 
     mutate(fishery_office= stringi::stri_trans_general(str = fishery_office, id = "Latin-ASCII"), fishery_office = toupper(fishery_office)) %>% 
@@ -123,15 +123,21 @@ get_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca){
 
   #eliminate records from freshwater fisheries    
   
+   
   fishery.catch.locs <- this.permit.corr %>% 
     dplyr::left_join(correct.loc.fishery, by =c("fishery_office","NOM_ENT")) %>%
     mutate(fishery_office = dplyr::if_else(!is.na(NOM_LOC_REV), NOM_LOC_REV, fishery_office)) %>% 
     select(-NOM_LOC_REV) %>% 
+    keep_when(NOM_ENT %in% coast.selecc) %>% 
     keep_when(NOM_LOC!="NO CONSIDERADO") %>%
     keep_when(!grepl("(CULT)",NOM_LOC)) %>%
     keep_when(!grepl("(CULT\\.)",NOM_LOC)) %>% 
-    keep_when(!grepl("(PRESA)",NOM_LOC)) %>%
-    keep_when(!grepl("(LAGO)",NOM_LOC))
+    keep_when(!grepl("PRESA ",NOM_LOC)) %>%
+    keep_when(!grepl("LAGO ",NOM_LOC)) %>% 
+    keep_when(!grepl("RIO ",NOM_LOC)) %>% 
+    keep_when(!grepl("ESTANQUE ",NOM_LOC)) %>% 
+    keep_when(!grepl("ARROYO ",NOM_LOC)) 
+    
   
   data.table::fwrite(fishery.catch.locs, here::here("data-raw","fisheries_data",paste0("catch_file_",this.catchfileno,".csv")))
   

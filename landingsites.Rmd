@@ -251,9 +251,34 @@ data("catchlocations")
 data("georeflocskm")
 
 
+georeffcatchlocs <- georref_catch(catchlocations, georeflocskm)
+  
+usethis::use_data(georeffcatchlocs, overwrite = TRUE)
+#creates template describing the data
+data.description <-sinew::makeOxygen(ggeoreffcatchlocs)
+cat(data.description, file=here::here("R",paste0("data-","georeffcatchlocs")))
+
+#rebuild and load the package
+devtools::load_all() # restarts and loads
 
 ```
 
+Georeference all catch data
+```{r}
+
+data("georeffcatchlocs")
+
+data("catchdata")
+
+#buffer Pacific to eliminate communities not in Gulf of California
+pac.buffer <- sf::st_read(here::here("data-raw","pac_mx_gc.shp")) %>%   
+  sf::st_transform(crs = 4326) %>% 
+  sf::st_buffer(0.1)
+
+plot(pac.buffer)
+
+georeff_catch_data()
+```
 
 
 Get permit information from the Registro Nacional de Pesca y Acuacultura RNPA and georreference
