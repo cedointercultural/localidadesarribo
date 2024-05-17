@@ -1,6 +1,6 @@
 #' @title DATASET_TITLE
 #' @description DATASET_DESCRIPTION
-#' @format A data frame with 1155143 rows and 9 variables:
+#' @format A data frame with 1335797 rows and 10 variables:
 #' \describe{
 #'   \item{\code{rnp_code}}{character COLUMN_DESCRIPTION}
 #'   \item{\code{NOM_ENT}}{character COLUMN_DESCRIPTION}
@@ -10,6 +10,7 @@
 #'   \item{\code{landed_w_kg}}{double COLUMN_DESCRIPTION}
 #'   \item{\code{value_mxn}}{double COLUMN_DESCRIPTION}
 #'   \item{\code{year}}{double COLUMN_DESCRIPTION}
+#'   \item{\code{month}}{character COLUMN_DESCRIPTION}
 #'   \item{\code{catch_id}}{character COLUMN_DESCRIPTION} 
 #'}
 #' @details DETAILS

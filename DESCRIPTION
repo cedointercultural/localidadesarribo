@@ -18,7 +18,8 @@ Imports:
     parallel,
     readr,
     sf,
-    tidyr
+    tidyr,
+    utf8
 Depends: 
     R (>= 2.10)
 LazyData: true

@@ -23,6 +23,9 @@ lapply(.packages, require, character.only=TRUE)
 # https://cran.r-project.org/web/packages/import/vignettes/import.html
 import::from(dplyr, mutate, distinct, select, group_by, summarise, keep_when = filter, rename)
 
+#to fix access with google
+#https://github.com/orgs/community/discussions/39210
+
 ```
 
 Get catch from official record. 
@@ -48,7 +51,9 @@ no.catchfiles <- 1:length(catch.files)
 
 #NOTE: There are 16,531 records between 2000-2004 with 0 price for catch
 
-parallel::mclapply(no.catchfiles, get_catch, catch.files, coast.selecc, locs.pesca)
+#parallel::mclapply(no.catchfiles, get_catch, catch.files, coast.selecc, locs.pesca)
+#use lapply for debugging
+lapply(no.catchfiles, get_catch, catch.files, coast.selecc, locs.pesca)
 
 catch.files.clean <- list.files(path = here::here("data-raw","fisheries_data"), full.names = TRUE)
 no.catchfiles.clean <- 1:length(catch.files.clean)
@@ -255,7 +260,7 @@ georeffcatchlocs <- georref_catch(catchlocations, georeflocskm)
   
 usethis::use_data(georeffcatchlocs, overwrite = TRUE)
 #creates template describing the data
-data.description <-sinew::makeOxygen(ggeoreffcatchlocs)
+data.description <-sinew::makeOxygen(georeffcatchlocs)
 cat(data.description, file=here::here("R",paste0("data-","georeffcatchlocs")))
 
 #rebuild and load the package
