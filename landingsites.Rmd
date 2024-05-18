@@ -85,6 +85,8 @@ locs.pesca <- clean_locs_pesca()
 data("inegigc")
 data("catchdata")
 
+
+
 fishery.offices.list <- get_fishery_office_catch(catchdata) 
 
 #fishery office list for 2024 is available here https://www.conapesca.gob.mx/work/sites/cona/dgppe/Subdelegaciones_de_Pesca.pdf
