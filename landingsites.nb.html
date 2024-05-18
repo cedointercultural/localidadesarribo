@@ -1772,21 +1772,32 @@ catch data to get unique fishery offices and georreference them</p>
 <pre class="r"><code>
 locs.pesca &lt;- clean_locs_pesca()</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoi4pyUIFJlYWRpbmcgZnJvbSBsb2NhbGlkYWRlc19jYXB0dXJhX2luZWdpLlxu4pyUIFJhbmdlICcnbG9jYWxpZGFkZXNfY2FwdHVyYV9pbmVnaScnLlxu4pyUIFJlYWRpbmcgZnJvbSB2dWxuZXJhYmlsaXR5X3RhYmxlcy5cbuKclCBSYW5nZSBsb2NzLlxuIn0= -->
+<!-- rnb-output-begin eyJkYXRhIjoi4pyUIFJlYWRpbmcgZnJvbSBsb2NhbGlkYWRlc19jYXB0dXJhX2luZWdpLlxu4pyUIFJhbmdlICcnbG9jYWxpZGFkZXNfY2FwdHVyYV9pbmVnaScnLlxu4pyWIFJlcXVlc3QgZmFpbGVkIFs0MjldLiBSZXRyeSAxIGhhcHBlbnMgaW4gMy41IHNlY29uZHMgLi4uXG7inJYgUmVxdWVzdCBmYWlsZWQgWzQyOV0uIFJldHJ5IDIgaGFwcGVucyBpbiA0Ljcgc2Vjb25kcyAuLi5cbuKcliBSZXF1ZXN0IGZhaWxlZCBbNDI5XS4gUmV0cnkgMyBoYXBwZW5zIGluIDEwLjkgc2Vjb25kcyAuLi5cbuKcliBSZXF1ZXN0IGZhaWxlZCBbNDI5XS4gUmV0cnkgNCBoYXBwZW5zIGluIDIxIHNlY29uZHMgLi4uXG7inJQgUmVhZGluZyBmcm9tIHZ1bG5lcmFiaWxpdHlfdGFibGVzLlxu4pyUIFJhbmdlIGxvY3MuXG4ifQ== -->
 <pre><code>✔ Reading from localidades_captura_inegi.
 ✔ Range &#39;&#39;localidades_captura_inegi&#39;&#39;.
+✖ Request failed [429]. Retry 1 happens in 3.5 seconds ...
+✖ Request failed [429]. Retry 2 happens in 4.7 seconds ...
+✖ Request failed [429]. Retry 3 happens in 10.9 seconds ...
+✖ Request failed [429]. Retry 4 happens in 21 seconds ...
 ✔ Reading from vulnerability_tables.
 ✔ Range locs.</code></pre>
 <!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuI2dldCB1bmlxdWUgZ2VvcnJlZmVyZW5jZWQgcm5wIGNvZGVzXG5cbmRhdGEoXCJpbmVnaWdjXCIpXG5kYXRhKFwiY2F0Y2hkYXRhXCIpXG5cbmZpc2hlcnkub2ZmaWNlcy5saXN0IDwtIGdldF9maXNoZXJ5X29mZmljZV9jYXRjaChjYXRjaGRhdGEpIFxuXG4jZmlzaGVyeSBvZmZpY2UgbGlzdCBmb3IgMjAyNCBpcyBhdmFpbGFibGUgaGVyZSBodHRwczovL3d3dy5jb25hcGVzY2EuZ29iLm14L3dvcmsvc2l0ZXMvY29uYS9kZ3BwZS9TdWJkZWxlZ2FjaW9uZXNfZGVfUGVzY2EucGRmXG4jdGhlIExhIFJlZm9ybWEgb2ZmaWNlIGlzIGluIHRoZSBNdW5pY2lwYWxpdHkgb2YgQW5nb3N0dXJhIGFuZCBoYXMgQ1ZFX0xPQyA9IDI1MDAyMDA5M1xuI3RoZXJlIGFyZSBsb2NhdGlvbnMgbmFtZWQgTGEgUmVmb3JtYSBzaXRlcyBpbiBTaW5hbG9hIHNvIGhhZCB0byBiZSBleHRyYWN0ZWQgbWFudWFsbHlcblxuZmlzaGVyeS5vZmZpY2UudGFibGUgPC0gZmlzaGVyeS5vZmZpY2VzLmxpc3QgJT4lIFxuICBkcGx5cjo6YmluZF9yb3dzKCkgJT4lIFxuICBkcGx5cjo6YXJyYW5nZShOT01fTE9DLE5PTV9FTlQpXG5cbmZpc2hlcnkuc3BhdGlhbCA8LSBzZjo6c3RfYXNfc2YoZmlzaGVyeS5vZmZpY2UudGFibGUsIGNvb3JkcyA9IGMoXCJkZWNpX2xvblwiLCBcImRlY2lfbGF0XCIpLCBjcnMgPSA0MzI2KSBcbmBgYCJ9 -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuI2dldCB1bmlxdWUgZ2VvcnJlZmVyZW5jZWQgcm5wIGNvZGVzXG5cbmRhdGEoXCJpbmVnaWdjXCIpXG5kYXRhKFwiY2F0Y2hkYXRhXCIpXG5cblxuXG5maXNoZXJ5Lm9mZmljZXMubGlzdCA8LSBnZXRfZmlzaGVyeV9vZmZpY2VfY2F0Y2goY2F0Y2hkYXRhKSBcbmBgYCJ9 -->
 <pre class="r"><code>#get unique georreferenced rnp codes
 
 data(&quot;inegigc&quot;)
 data(&quot;catchdata&quot;)
 
-fishery.offices.list &lt;- get_fishery_office_catch(catchdata) 
 
-#fishery office list for 2024 is available here https://www.conapesca.gob.mx/work/sites/cona/dgppe/Subdelegaciones_de_Pesca.pdf
+
+fishery.offices.list &lt;- get_fishery_office_catch(catchdata) </code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoi4pyUIFJlYWRpbmcgZnJvbSBmaXNoZXJ5X29mZmljZXNfMjAyNC5cbuKclCBSYW5nZSBTdWJvZmljaW5hc19wZXNjYS5cbiJ9 -->
+<pre><code>✔ Reading from fishery_offices_2024.
+✔ Range Suboficinas_pesca.</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuI2Zpc2hlcnkgb2ZmaWNlIGxpc3QgZm9yIDIwMjQgaXMgYXZhaWxhYmxlIGhlcmUgaHR0cHM6Ly93d3cuY29uYXBlc2NhLmdvYi5teC93b3JrL3NpdGVzL2NvbmEvZGdwcGUvU3ViZGVsZWdhY2lvbmVzX2RlX1Blc2NhLnBkZlxuI3RoZSBMYSBSZWZvcm1hIG9mZmljZSBpcyBpbiB0aGUgTXVuaWNpcGFsaXR5IG9mIEFuZ29zdHVyYSBhbmQgaGFzIENWRV9MT0MgPSAyNTAwMjAwOTNcbiN0aGVyZSBhcmUgbG9jYXRpb25zIG5hbWVkIExhIFJlZm9ybWEgc2l0ZXMgaW4gU2luYWxvYSBzbyBoYWQgdG8gYmUgZXh0cmFjdGVkIG1hbnVhbGx5XG5cbmZpc2hlcnkub2ZmaWNlLnRhYmxlIDwtIGZpc2hlcnkub2ZmaWNlcy5saXN0ICU+JSBcbiAgZHBseXI6OmJpbmRfcm93cygpICU+JSBcbiAgZHBseXI6OmFycmFuZ2UoTk9NX0xPQyxOT01fRU5UKVxuXG5maXNoZXJ5LnNwYXRpYWwgPC0gc2Y6OnN0X2FzX3NmKGZpc2hlcnkub2ZmaWNlLnRhYmxlLCBjb29yZHMgPSBjKFwiZGVjaV9sb25cIiwgXCJkZWNpX2xhdFwiKSwgY3JzID0gNDMyNikgXG5cbmZpc2hlcnkuc3BhdGlhbCAlPiUgXG4gIHNmOjpzdF93cml0ZShoZXJlOjpoZXJlKFwib3V0cHV0c1wiLFwiZmlzaGVyeV9vZmZpY2VzLnNocFwiKSwgYXBwZW5kPUZBTFNFKVxuYGBgIn0= -->
+<pre class="r"><code>#fishery office list for 2024 is available here https://www.conapesca.gob.mx/work/sites/cona/dgppe/Subdelegaciones_de_Pesca.pdf
 #the La Reforma office is in the Municipality of Angostura and has CVE_LOC = 250020093
 #there are locations named La Reforma sites in Sinaloa so had to be extracted manually
 
@@ -1794,11 +1805,59 @@ fishery.office.table &lt;- fishery.offices.list %&gt;%
   dplyr::bind_rows() %&gt;% 
   dplyr::arrange(NOM_LOC,NOM_ENT)
 
-fishery.spatial &lt;- sf::st_as_sf(fishery.office.table, coords = c(&quot;deci_lon&quot;, &quot;deci_lat&quot;), crs = 4326) </code></pre>
+fishery.spatial &lt;- sf::st_as_sf(fishery.office.table, coords = c(&quot;deci_lon&quot;, &quot;deci_lat&quot;), crs = 4326) 
+
+fishery.spatial %&gt;% 
+  sf::st_write(here::here(&quot;outputs&quot;,&quot;fishery_offices.shp&quot;), append=FALSE)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3IgaW4gc3RfYXNfc2YuZGF0YS5mcmFtZShmaXNoZXJ5Lm9mZmljZS50YWJsZSwgY29vcmRzID0gYyhcImRlY2lfbG9uXCIsICA6IFxuICBtaXNzaW5nIHZhbHVlcyBpbiBjb29yZGluYXRlcyBub3QgYWxsb3dlZFxuIn0= -->
-<pre><code>Error in st_as_sf.data.frame(fishery.office.table, coords = c(&quot;deci_lon&quot;,  : 
-  missing values in coordinates not allowed</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiRGVsZXRpbmcgbGF5ZXIgYGZpc2hlcnlfb2ZmaWNlcycgdXNpbmcgZHJpdmVyIGBFU1JJIFNoYXBlZmlsZSdcbldyaXRpbmcgbGF5ZXIgYGZpc2hlcnlfb2ZmaWNlcycgdG8gZGF0YSBzb3VyY2UgXG4gIGAvaG9tZS9hdGxhbnRpcy9sb2NhbGlkYWRlc2Fycmliby9vdXRwdXRzL2Zpc2hlcnlfb2ZmaWNlcy5zaHAnIHVzaW5nIGRyaXZlciBgRVNSSSBTaGFwZWZpbGUnXG5Xcml0aW5nIDUwIGZlYXR1cmVzIHdpdGggOSBmaWVsZHMgYW5kIGdlb21ldHJ5IHR5cGUgUG9pbnQuXG4ifQ== -->
+<pre><code>Deleting layer `fishery_offices&#39; using driver `ESRI Shapefile&#39;
+Writing layer `fishery_offices&#39; to data source 
+  `/home/atlantis/localidadesarribo/outputs/fishery_offices.shp&#39; using driver `ESRI Shapefile&#39;
+Writing 50 features with 9 fields and geometry type Point.</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxucmVhZHI6OndyaXRlX2NzdihmaXNoZXJ5Lm9mZmljZS50YWJsZSwgaGVyZTo6aGVyZShcIm91dHB1dHNcIixcImZpc2hlcnlfb2ZmaWNlcy5jc3ZcIikpXG5cbmZpc2hlcnlvZmZpY2UgPC0gZmlzaGVyeS5vZmZpY2UudGFibGVcbiAgXG51c2V0aGlzOjp1c2VfZGF0YShmaXNoZXJ5b2ZmaWNlLCBvdmVyd3JpdGUgPSBUUlVFKVxuYGBgIn0= -->
+<pre class="r"><code>readr::write_csv(fishery.office.table, here::here(&quot;outputs&quot;,&quot;fishery_offices.csv&quot;))
+
+fisheryoffice &lt;- fishery.office.table
+  
+usethis::use_data(fisheryoffice, overwrite = TRUE)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoi4pyUIFNldHRpbmcgYWN0aXZlIHByb2plY3QgdG8gJy9ob21lL2F0bGFudGlzL2xvY2FsaWRhZGVzYXJyaWJvJ+KclCBTYXZpbmcgJ2Zpc2hlcnlvZmZpY2UnIHRvICdkYXRhL2Zpc2hlcnlvZmZpY2UucmRhJ+KAoiBEb2N1bWVudCB5b3VyIGRhdGEgKHNlZSAnaHR0cHM6Ly9yLXBrZ3Mub3JnL2RhdGEuaHRtbCcpXG4ifQ== -->
+<pre><code>✔ Setting active project to &#39;/home/atlantis/localidadesarribo&#39;✔ Saving &#39;fisheryoffice&#39; to &#39;data/fisheryoffice.rda&#39;• Document your data (see &#39;https://r-pkgs.org/data.html&#39;)</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuI2NyZWF0ZXMgdGVtcGxhdGUgZGVzY3JpYmluZyB0aGUgZGF0YVxuZGF0YS5kZXNjcmlwdGlvbiA8LXNpbmV3OjptYWtlT3h5Z2VuKGZpc2hlcnlvZmZpY2UpXG5gYGAifQ== -->
+<pre class="r"><code>#creates template describing the data
+data.description &lt;-sinew::makeOxygen(fisheryoffice)</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoiIycgQHRpdGxlIERBVEFTRVRfVElUTEVcbiMnIEBkZXNjcmlwdGlvbiBEQVRBU0VUX0RFU0NSSVBUSU9OXG4jJyBAZm9ybWF0IEEgZGF0YSBmcmFtZSB3aXRoIDUwIHJvd3MgYW5kIDExIHZhcmlhYmxlczpcbiMnIFxcZGVzY3JpYmV7XG4jJyAgIFxcaXRlbXtcXGNvZGV7Tk9NX0xPQ319e2NoYXJhY3RlciBDT0xVTU5fREVTQ1JJUFRJT059XG4jJyAgIFxcaXRlbXtcXGNvZGV7Tk9NX0VOVH19e2NoYXJhY3RlciBDT0xVTU5fREVTQ1JJUFRJT059XG4jJyAgIFxcaXRlbXtcXGNvZGV7Tk9NX01VTn19e2NoYXJhY3RlciBDT0xVTU5fREVTQ1JJUFRJT059XG4jJyAgIFxcaXRlbXtcXGNvZGV7Q1ZFX0VOVH19e2NoYXJhY3RlciBDT0xVTU5fREVTQ1JJUFRJT059XG4jJyAgIFxcaXRlbXtcXGNvZGV7Q1ZFX01VTn19e2NoYXJhY3RlciBDT0xVTU5fREVTQ1JJUFRJT059XG4jJyAgIFxcaXRlbXtcXGNvZGV7Q1ZFX0xPQ319e2NoYXJhY3RlciBDT0xVTU5fREVTQ1JJUFRJT059XG4jJyAgIFxcaXRlbXtcXGNvZGV7UE9CVE9UfX17ZG91YmxlIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtQT0JGRU19fXtkb3VibGUgQ09MVU1OX0RFU0NSSVBUSU9OfVxuIycgICBcXGl0ZW17XFxjb2Rle1BPQk1BU319e2RvdWJsZSBDT0xVTU5fREVTQ1JJUFRJT059XG4jJyAgIFxcaXRlbXtcXGNvZGV7ZGVjaV9sb259fXtkb3VibGUgQ09MVU1OX0RFU0NSSVBUSU9OfVxuIycgICBcXGl0ZW17XFxjb2Rle2RlY2lfbGF0fX17ZG91YmxlIENPTFVNTl9ERVNDUklQVElPTn0gXG4jJ31cbiMnIEBkZXRhaWxzIERFVEFJTFNcblwiZmlzaGVyeW9mZmljZVwiXG4ifQ== -->
+<pre><code>#&#39; @title DATASET_TITLE
+#&#39; @description DATASET_DESCRIPTION
+#&#39; @format A data frame with 50 rows and 11 variables:
+#&#39; \describe{
+#&#39;   \item{\code{NOM_LOC}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{NOM_ENT}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{NOM_MUN}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{CVE_ENT}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{CVE_MUN}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{CVE_LOC}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{POBTOT}}{double COLUMN_DESCRIPTION}
+#&#39;   \item{\code{POBFEM}}{double COLUMN_DESCRIPTION}
+#&#39;   \item{\code{POBMAS}}{double COLUMN_DESCRIPTION}
+#&#39;   \item{\code{deci_lon}}{double COLUMN_DESCRIPTION}
+#&#39;   \item{\code{deci_lat}}{double COLUMN_DESCRIPTION} 
+#&#39;}
+#&#39; @details DETAILS
+&quot;fisheryoffice&quot;</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2F0KGRhdGEuZGVzY3JpcHRpb24sIGZpbGU9aGVyZTo6aGVyZShcIlJcIixwYXN0ZTAoXCJkYXRhLVwiLFwiZmlzaGVyeW9mZmljZVwiKSkpXG5cbiNyZWJ1aWxkIGFuZCBsb2FkIHRoZSBwYWNrYWdlXG5kZXZ0b29sczo6bG9hZF9hbGwoKSAjIHJlc3RhcnRzIGFuZCBsb2Fkc1xuYGBgIn0= -->
+<pre class="r"><code>cat(data.description, file=here::here(&quot;R&quot;,paste0(&quot;data-&quot;,&quot;fisheryoffice&quot;)))
+
+#rebuild and load the package
+devtools::load_all() # restarts and loads</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoi4oS5IExvYWRpbmcgbG9jYWxpZGFkZXNhcnJpYm9cbiJ9 -->
+<pre><code>ℹ Loading localidadesarribo</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
@@ -1809,8 +1868,10 @@ fishery.spatial &lt;- sf::st_as_sf(fishery.office.table, coords = c(&quot;deci_l
 <pre class="r"><code>
 locs.pesca &lt;- clean_locs_pesca()</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoi4pyUIFJlYWRpbmcgZnJvbSB2dWxuZXJhYmlsaXR5X3RhYmxlcy5cbuKclCBSYW5nZSBsb2NzLlxuIn0= -->
-<pre><code>✔ Reading from vulnerability_tables.
+<!-- rnb-output-begin eyJkYXRhIjoi4pyUIFJlYWRpbmcgZnJvbSBsb2NhbGlkYWRlc19jYXB0dXJhX2luZWdpLlxu4pyUIFJhbmdlICcnbG9jYWxpZGFkZXNfY2FwdHVyYV9pbmVnaScnLlxu4pyUIFJlYWRpbmcgZnJvbSB2dWxuZXJhYmlsaXR5X3RhYmxlcy5cbuKclCBSYW5nZSBsb2NzLlxuIn0= -->
+<pre><code>✔ Reading from localidades_captura_inegi.
+✔ Range &#39;&#39;localidades_captura_inegi&#39;&#39;.
+✔ Reading from vulnerability_tables.
 ✔ Range locs.</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGF0YShcImNhdGNoZGF0YVwiKVxuXG5kYXRhKFwiaW5lZ2lnY1wiKVxuXG5jYXRjaC5sb2NhdGlvbnMuZGF0YSA8LSBnZXRfbG9jYXRpb25zX2NhdGNoKGNhdGNoZGF0YSkgXG5cbnJlYWRyOjp3cml0ZV9jc3YoY2F0Y2gubG9jYXRpb25zLmRhdGEsIGhlcmU6OmhlcmUoXCJvdXRwdXRzXCIsXCJjYXRjaF9sb2NhdGlvbnMuY3N2XCIpKVxuXG5jYXRjaGxvY2F0aW9ucyA8LSBjYXRjaC5sb2NhdGlvbnMuZGF0YSAlPiUgXG4gIGRwbHlyOjpiaW5kX3Jvd3MoKSBcblxudXNldGhpczo6dXNlX2RhdGEoY2F0Y2hsb2NhdGlvbnMsIG92ZXJ3cml0ZSA9IFRSVUUpXG5gYGAifQ== -->
@@ -1827,17 +1888,17 @@ catchlocations &lt;- catch.locations.data %&gt;%
 
 usethis::use_data(catchlocations, overwrite = TRUE)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoi4pyUIFNldHRpbmcgYWN0aXZlIHByb2plY3QgdG8gJy9ob21lL2F0bGFudGlzL2xvY2FsaWRhZGVzYXJyaWJvJ+KclCBTYXZpbmcgJ2NhdGNobG9jYXRpb25zJyB0byAnZGF0YS9jYXRjaGxvY2F0aW9ucy5yZGEn4oCiIERvY3VtZW50IHlvdXIgZGF0YSAoc2VlICdodHRwczovL3ItcGtncy5vcmcvZGF0YS5odG1sJylcbiJ9 -->
-<pre><code>✔ Setting active project to &#39;/home/atlantis/localidadesarribo&#39;✔ Saving &#39;catchlocations&#39; to &#39;data/catchlocations.rda&#39;• Document your data (see &#39;https://r-pkgs.org/data.html&#39;)</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoi4pyUIFNhdmluZyAnY2F0Y2hsb2NhdGlvbnMnIHRvICdkYXRhL2NhdGNobG9jYXRpb25zLnJkYSfigKIgRG9jdW1lbnQgeW91ciBkYXRhIChzZWUgJ2h0dHBzOi8vci1wa2dzLm9yZy9kYXRhLmh0bWwnKVxuIn0= -->
+<pre><code>✔ Saving &#39;catchlocations&#39; to &#39;data/catchlocations.rda&#39;• Document your data (see &#39;https://r-pkgs.org/data.html&#39;)</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuI2NyZWF0ZXMgdGVtcGxhdGUgZGVzY3JpYmluZyB0aGUgZGF0YVxuZGF0YS5kZXNjcmlwdGlvbiA8LXNpbmV3OjptYWtlT3h5Z2VuKGNhdGNobG9jYXRpb25zKVxuYGBgIn0= -->
 <pre class="r"><code>#creates template describing the data
 data.description &lt;-sinew::makeOxygen(catchlocations)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiIycgQHRpdGxlIERBVEFTRVRfVElUTEVcbiMnIEBkZXNjcmlwdGlvbiBEQVRBU0VUX0RFU0NSSVBUSU9OXG4jJyBAZm9ybWF0IEEgZGF0YSBmcmFtZSB3aXRoIDg5OTcgcm93cyBhbmQgNCB2YXJpYWJsZXM6XG4jJyBcXGRlc2NyaWJle1xuIycgICBcXGl0ZW17XFxjb2Rle3JucF9jb2RlfX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtOT01fRU5UfX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtOT01fTE9DfX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtmaXNoZXJ5X29mZmljZX19e2NoYXJhY3RlciBDT0xVTU5fREVTQ1JJUFRJT059IFxuIyd9XG4jJyBAZGV0YWlscyBERVRBSUxTXG5cImNhdGNobG9jYXRpb25zXCJcbiJ9 -->
+<!-- rnb-output-begin eyJkYXRhIjoiIycgQHRpdGxlIERBVEFTRVRfVElUTEVcbiMnIEBkZXNjcmlwdGlvbiBEQVRBU0VUX0RFU0NSSVBUSU9OXG4jJyBAZm9ybWF0IEEgZGF0YSBmcmFtZSB3aXRoIDg3MTggcm93cyBhbmQgNCB2YXJpYWJsZXM6XG4jJyBcXGRlc2NyaWJle1xuIycgICBcXGl0ZW17XFxjb2Rle3JucF9jb2RlfX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtOT01fRU5UfX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtOT01fTE9DfX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtmaXNoZXJ5X29mZmljZX19e2NoYXJhY3RlciBDT0xVTU5fREVTQ1JJUFRJT059IFxuIyd9XG4jJyBAZGV0YWlscyBERVRBSUxTXG5cImNhdGNobG9jYXRpb25zXCJcbiJ9 -->
 <pre><code>#&#39; @title DATASET_TITLE
 #&#39; @description DATASET_DESCRIPTION
-#&#39; @format A data frame with 8997 rows and 4 variables:
+#&#39; @format A data frame with 8718 rows and 4 variables:
 #&#39; \describe{
 #&#39;   \item{\code{rnp_code}}{character COLUMN_DESCRIPTION}
 #&#39;   \item{\code{NOM_ENT}}{character COLUMN_DESCRIPTION}
@@ -1879,12 +1940,35 @@ usethis::use_data(georeffcatchlocs, overwrite = TRUE)</code></pre>
 <!-- rnb-output-begin eyJkYXRhIjoi4pyUIFNhdmluZyAnZ2VvcmVmZmNhdGNobG9jcycgdG8gJ2RhdGEvZ2VvcmVmZmNhdGNobG9jcy5yZGEn4oCiIERvY3VtZW50IHlvdXIgZGF0YSAoc2VlICdodHRwczovL3ItcGtncy5vcmcvZGF0YS5odG1sJylcbiJ9 -->
 <pre><code>✔ Saving &#39;georeffcatchlocs&#39; to &#39;data/georeffcatchlocs.rda&#39;• Document your data (see &#39;https://r-pkgs.org/data.html&#39;)</code></pre>
 <!-- rnb-output-end -->
-<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuI2NyZWF0ZXMgdGVtcGxhdGUgZGVzY3JpYmluZyB0aGUgZGF0YVxuZGF0YS5kZXNjcmlwdGlvbiA8LXNpbmV3OjptYWtlT3h5Z2VuKGdnZW9yZWZmY2F0Y2hsb2NzKVxuYGBgIn0= -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuI2NyZWF0ZXMgdGVtcGxhdGUgZGVzY3JpYmluZyB0aGUgZGF0YVxuZGF0YS5kZXNjcmlwdGlvbiA8LXNpbmV3OjptYWtlT3h5Z2VuKGdlb3JlZmZjYXRjaGxvY3MpXG5gYGAifQ== -->
 <pre class="r"><code>#creates template describing the data
-data.description &lt;-sinew::makeOxygen(ggeoreffcatchlocs)</code></pre>
+data.description &lt;-sinew::makeOxygen(georeffcatchlocs)</code></pre>
 <!-- rnb-source-end -->
-<!-- rnb-output-begin eyJkYXRhIjoiRXJyb3I6IG9iamVjdCAnZ2dlb3JlZmZjYXRjaGxvY3MnIG5vdCBmb3VuZFxuIn0= -->
-<pre><code>Error: object &#39;ggeoreffcatchlocs&#39; not found</code></pre>
+<!-- rnb-output-begin eyJkYXRhIjoiIycgQHRpdGxlIERBVEFTRVRfVElUTEVcbiMnIEBkZXNjcmlwdGlvbiBEQVRBU0VUX0RFU0NSSVBUSU9OXG4jJyBAZm9ybWF0IEEgZGF0YSBmcmFtZSB3aXRoIDc1MTIgcm93cyBhbmQgOCB2YXJpYWJsZXM6XG4jJyBcXGRlc2NyaWJle1xuIycgICBcXGl0ZW17XFxjb2Rle2NhdGNoX2NvZGV9fXtjaGFyYWN0ZXIgQ09MVU1OX0RFU0NSSVBUSU9OfVxuIycgICBcXGl0ZW17XFxjb2Rle3JucF9jb2RlfX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtOT01fTE9DfX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtOT01fRU5UfX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtmaXNoZXJ5X29mZmljZX19e2NoYXJhY3RlciBDT0xVTU5fREVTQ1JJUFRJT059XG4jJyAgIFxcaXRlbXtcXGNvZGV7ZmlzaGVyeV9vZmZpY2VfZW50fX17Y2hhcmFjdGVyIENPTFVNTl9ERVNDUklQVElPTn1cbiMnICAgXFxpdGVte1xcY29kZXtkZWNpX2xhdH19e2RvdWJsZSBDT0xVTU5fREVTQ1JJUFRJT059XG4jJyAgIFxcaXRlbXtcXGNvZGV7ZGVjaV9sb259fXtkb3VibGUgQ09MVU1OX0RFU0NSSVBUSU9OfSBcbiMnfVxuIycgQGRldGFpbHMgREVUQUlMU1xuXCJnZW9yZWZmY2F0Y2hsb2NzXCJcbiJ9 -->
+<pre><code>#&#39; @title DATASET_TITLE
+#&#39; @description DATASET_DESCRIPTION
+#&#39; @format A data frame with 7512 rows and 8 variables:
+#&#39; \describe{
+#&#39;   \item{\code{catch_code}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{rnp_code}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{NOM_LOC}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{NOM_ENT}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{fishery_office}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{fishery_office_ent}}{character COLUMN_DESCRIPTION}
+#&#39;   \item{\code{deci_lat}}{double COLUMN_DESCRIPTION}
+#&#39;   \item{\code{deci_lon}}{double COLUMN_DESCRIPTION} 
+#&#39;}
+#&#39; @details DETAILS
+&quot;georeffcatchlocs&quot;</code></pre>
+<!-- rnb-output-end -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuY2F0KGRhdGEuZGVzY3JpcHRpb24sIGZpbGU9aGVyZTo6aGVyZShcIlJcIixwYXN0ZTAoXCJkYXRhLVwiLFwiZ2VvcmVmZmNhdGNobG9jc1wiKSkpXG5cbiNyZWJ1aWxkIGFuZCBsb2FkIHRoZSBwYWNrYWdlXG5kZXZ0b29sczo6bG9hZF9hbGwoKSAjIHJlc3RhcnRzIGFuZCBsb2Fkc1xuYGBgIn0= -->
+<pre class="r"><code>cat(data.description, file=here::here(&quot;R&quot;,paste0(&quot;data-&quot;,&quot;georeffcatchlocs&quot;)))
+
+#rebuild and load the package
+devtools::load_all() # restarts and loads</code></pre>
+<!-- rnb-source-end -->
+<!-- rnb-output-begin eyJkYXRhIjoi4oS5IExvYWRpbmcgbG9jYWxpZGFkZXNhcnJpYm9cbiJ9 -->
+<pre><code>ℹ Loading localidadesarribo</code></pre>
 <!-- rnb-output-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->

@@ -1,0 +1,15 @@
+#' @title DATASET_TITLE
+#' @description DATASET_DESCRIPTION
+#' @format A data frame with 7512 rows and 8 variables:
+#' \describe{
+#'   \item{\code{catch_code}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{rnp_code}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{NOM_LOC}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{NOM_ENT}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{fishery_office}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{fishery_office_ent}}{character COLUMN_DESCRIPTION}
+#'   \item{\code{deci_lat}}{double COLUMN_DESCRIPTION}
+#'   \item{\code{deci_lon}}{double COLUMN_DESCRIPTION} 
+#'}
+#' @details DETAILS
+"georeffcatchlocs"

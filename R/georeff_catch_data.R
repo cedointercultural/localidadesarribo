@@ -10,9 +10,18 @@
 #' @examples
 georref_catch_data <- function(catchdata, georeffcatchlocs, pac.buffer){
   
+  georeff.codes <- georeffcatchlocs %>% 
+    dplyr::distinct(catch_code, deci_lat, deci_lon) 
+
+  catch.species <- unique(catch.code$species)
+  
+  fresh.sp <- c("TRUCHA","CARPA")
+  
+    
   catch.code <- catchdata %>% 
     mutate(catch_code = paste(rnp_code, NOM_ENT, NOM_LOC, fishery_office, sep="_")) %>% 
-    left_join(georeffcatchlocs, by = c("catch_code")) 
+    dplyr::left_join(georeff.codes, by = c("catch_code")) %>% 
+    keep_when(!is.na(deci_lat))
   
   catch.spatial <- catch.code %>% 
     sf::st_as_sf(coords = c("deci_lon", "deci_lat"), crs = 4326) 
