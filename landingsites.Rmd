@@ -34,8 +34,6 @@ Uses table with corrected names to standarize names of locations and fishery off
 Combines catch files for all years and selects landing site, state, fishery office, species, weight, and catch value.
 Resulting data is imported as catch rmd into the package
 
-Need to add separation of sites that are closer on the Pacific Coast that the Gulf after the locations are georreferenced
-
 ```{r get catch data, include=FALSE}
 
 locs.pesca <- clean_locs_pesca()
@@ -284,7 +282,7 @@ pac.buffer <- sf::st_read(here::here("data-raw","pac_mx_gc.shp")) %>%
 
 plot(pac.buffer)
 
-georeff_catch_data()
+georeff_catch_data(georeffcatchlocs, catchdata, pac.buffer)
 ```
 
 

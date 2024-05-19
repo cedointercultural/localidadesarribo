@@ -8,7 +8,7 @@
 #' @export
 #'
 #' @examples
-georref_catch_data <- function(catchdata, georeffcatchlocs, pac.buffer){
+georref_catch_data <- function(georeffcatchlocs, catchdata, pac.buffer){
   
   georeff.codes <- georeffcatchlocs %>% 
     dplyr::distinct(catch_code, deci_lat, deci_lon) 
@@ -18,7 +18,8 @@ georref_catch_data <- function(catchdata, georeffcatchlocs, pac.buffer){
   fresh.sp <- c("TRUCHA","CARPA")
   
     
-  catch.code <- catchdata %>% 
+  catch.code <- catchdata %>%
+    keep_when(!species %in% fresh.sp) %>%
     mutate(catch_code = paste(rnp_code, NOM_ENT, NOM_LOC, fishery_office, sep="_")) %>% 
     dplyr::left_join(georeff.codes, by = c("catch_code")) %>% 
     keep_when(!is.na(deci_lat))
