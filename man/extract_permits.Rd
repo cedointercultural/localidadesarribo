@@ -7,10 +7,9 @@
 extract_permits(
   thispermitfile.no,
   permit.files,
-  inegi.cost.comm.all,
   coast.selecc,
   locs.pesca,
-  georef.locs.km
+  georeflocskm
 )
 }
 \arguments{
@@ -22,13 +21,7 @@ extract_permits(
 
 \item{locs.pesca}{}
 
-\item{inegi.cost.comm}{}
-
-\item{locs.inegi.1}{}
-
-\item{locs.inegi.2}{}
-
-\item{locs.google}{}
+\item{georeflocskm}{}
 }
 \value{
 this.permit.inegi

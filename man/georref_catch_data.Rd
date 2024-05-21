@@ -4,7 +4,7 @@
 \alias{georref_catch_data}
 \title{Georeferrence all catch data}
 \usage{
-georref_catch_data(catchdata, georeffcatchlocs, pac.buffer)
+georref_catch_data(georeffcatchlocs, catchdata, pac.buffer)
 }
 \arguments{
 \item{catchdata}{}

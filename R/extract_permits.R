@@ -2,12 +2,9 @@
 #'
 #' @param thispermitfile.no 
 #' @param permit.files 
-#' @param inegi.cost.comm 
 #' @param coast.selecc 
 #' @param locs.pesca 
-#' @param locs.inegi.1 
-#' @param locs.inegi.2 
-#' @param locs.google 
+#' @param georeflocskm 
 #'
 #' @return this.permit.inegi
 #' @export
@@ -16,8 +13,7 @@
 #' @description
 #' Extract permit with location information to match with catch records
 #' 
-extract_permits <- function(thispermitfile.no, permit.files, inegi.cost.comm.all, 
-                            coast.selecc, locs.pesca, georef.locs.km){
+extract_permits <- function(thispermitfile.no, permit.files, coast.selecc, locs.pesca, georeflocskm){
 
   this.permitfile <- permit.files[thispermitfile.no]
 
@@ -141,7 +137,7 @@ extract_permits <- function(thispermitfile.no, permit.files, inegi.cost.comm.all
     select(-NOM_LOC_REV, -NOM_ENT_REV)
 
   this.permit.inegi.locs <- this.permit.corr %>% 
-      dplyr::left_join(georef.locs.km, by = c("NOM_ENT", "NOM_LOC")) %>% 
+      dplyr::left_join(georeflocskm, by = c("NOM_ENT", "NOM_LOC")) %>% 
      keep_when(!is.na(rnp_code) & !is.na(deci_lat) & !is.na(deci_lon)) %>% 
     distinct(rnp_code, NOM_LOC, NOM_ENT, deci_lat, deci_lon, fishery_office, fishery_office_ent, distance_km)
   
