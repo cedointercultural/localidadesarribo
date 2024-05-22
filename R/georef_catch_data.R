@@ -1,16 +1,16 @@
 #' Georeferrence all catch data
 #'
 #' @param catchdata 
-#' @param georeffcatchlocs
+#' @param georefcatchlocs
 #' @param pac.buffer 
 #'
-#' @return georeffcatchlocs
+#' @return georefcatchlocs
 #' @export
 #'
 #' @examples
-georref_catch_data <- function(georeffcatchlocs, catchdata, pac.buffer){
+georef_catch_data <- function(georefcatchlocs, catchdata){
   
-  georeff.codes <- georeffcatchlocs %>% 
+  georeff.codes <- georefcatchlocs %>% 
     dplyr::distinct(catch_code, deci_lat, deci_lon) 
 
   fresh.sp <- c("TRUCHA","CARPA", "BAGRE")
@@ -56,39 +56,43 @@ georref_catch_data <- function(georeffcatchlocs, catchdata, pac.buffer){
     summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop')
   
   catch.spatial <- all.catch.code %>% 
-    sf::st_as_sf(coords = c("deci_lon", "deci_lat"), crs = 4326)
+    sf::st_as_sf(coords = c("deci_lon", "deci_lat"), crs = 4269)
   
   sf::sf_use_s2(FALSE)
   
   #buffer Pacific to eliminate communities not in Gulf of California
-  #pac.polygon <- sf::st_read(here::here("data-raw","pac_mx_gc.shp")) %>%   
-  #  sf::st_transform(crs = 4269) 
+  pac.polygon <- sf::st_read(here::here("data-raw","SHP","pacific_polygon.shp")) %>%   
+    sf::st_transform(crs = 4269) 
   
   gc.polygon <- sf::st_read(here::here("data-raw","SHP","Golfo_california_wetland_poly_WGS84.shp")) %>%   
     sf::st_transform(crs = 4269) 
   
-#  pac.buffer <- pac.polygon %>% #https://epsg.io/4269#google_vignette
- #   sf::st_buffer(0.5)
+  pac.buffer <- pac.polygon %>% #https://epsg.io/4269#google_vignette
+   sf::st_buffer(0.5)
 
-  gc.buffer <- gc.polygon %>% #https://epsg.io/4269#google_vignette
-    sf::st_buffer(0.5)
+#  gc.buffer <- gc.polygon %>% #https://epsg.io/4269#google_vignette
+#    sf::st_buffer(0.5)
   
-  catch.spatial <- catch.spatial %>% 
-    sf::st_difference(gc.buffer) 
+  catch.pacific <- catch.spatial %>% 
+    sf::st_difference(pac.buffer) 
 
-  ggplot2::ggplot(gc.buffer) + 
+  catch.plot <- ggplot2::ggplot(gc.polygon) + 
     ggplot2::geom_sf() +
-    ggplot2::geom_sf(data = catch.spatial) +
-  
+    ggplot2::geom_sf(data = catch.spatial, color = "red") +
+    ggplot2::geom_sf(data = catch.pacific, color = "blue") +
+    ggplot2::geom_sf(data = pac.polygon)
+
+ggplot2::ggsave(catch.plot, here::here("outputs","catch_plot.png"), width = 10, height = 10)
+    
   
   catch.geo.locs <- catch.spatial %>% 
     dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
                   deci_lat = sf::st_coordinates(.)[,2]) %>% 
-    dplyr::as_tibble()
+    dplyr::as_tibble() %>% 
+    select(-geometry)
    
+  readr::write_csv(catch.geo.locs, here::here("outputs","georefcatch_loc_month.csv"))
   
-  
-  
-  return(catch.geo.locs)
+  return(catch.plot)
   
 }

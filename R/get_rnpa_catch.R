@@ -5,7 +5,7 @@
 #' @param coast.selecc selected coastal states
 #' @param locs.pesca corrected location names
 #' @param permit.locs.geo geolocated permits
-#' @param georef.locs.km georreferenced locations
+#' @param georef.locs.km georeferenced locations
 #' @param fishery.office.table INEGI coastal communities
 #'
 #' @return catch.file.rnp

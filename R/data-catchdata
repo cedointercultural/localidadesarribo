@@ -1,6 +1,6 @@
 #' @title DATASET_TITLE
 #' @description DATASET_DESCRIPTION
-#' @format A data frame with 1336304 rows and 10 variables:
+#' @format A data frame with 1336298 rows and 10 variables:
 #' \describe{
 #'   \item{\code{rnp_code}}{character COLUMN_DESCRIPTION}
 #'   \item{\code{NOM_ENT}}{character COLUMN_DESCRIPTION}

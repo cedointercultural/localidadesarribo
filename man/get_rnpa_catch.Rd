@@ -33,7 +33,7 @@ get_rnpa_catch(
 
 \item{permit.locs.geo}{geolocated permits}
 
-\item{georef.locs.km}{georreferenced locations}
+\item{georef.locs.km}{georeferenced locations}
 
 \item{fishery.office.table}{INEGI coastal communities}
 }

@@ -3,11 +3,11 @@
 #' @param catchlocations 
 #' @param georeflocskm 
 #'
-#' @return georeffcatchlocs
+#' @return georefcatchlocs
 #' @export
 #'
 #' @examples
-georref_catch <- function(catchlocations, georeflocskm){
+georef_catch <- function(catchlocations, georeflocskm){
   
   catch.code <- catchlocations %>% 
     mutate(catch_code = paste(rnp_code, NOM_ENT, NOM_LOC, fishery_office, sep="_"))
@@ -50,11 +50,11 @@ georref_catch <- function(catchlocations, georeflocskm){
   
     #get_place <- function(thiscommunity,thisstate){georeflocskm %>% keep_when(grepl(thiscommunity, NOM_LOC)) %>% keep_when(grepl(thisstate, NOM_ENT))}
   
-  georeffcatchlocs <- dplyr::bind_rows(locs.catch.geo.off.coor, locs.catch.geo.noff.coor)  %>% 
+  georefcatchlocs <- dplyr::bind_rows(locs.catch.geo.off.coor, locs.catch.geo.noff.coor)  %>% 
     dplyr::group_by(catch_code, rnp_code, NOM_LOC, NOM_ENT, fishery_office, fishery_office_ent) %>%
     summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop')
   
   
-  return(georeffcatchlocs)
+  return(georefcatchlocs)
   
 }
