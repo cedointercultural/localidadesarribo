@@ -19,7 +19,8 @@ Imports:
     readr,
     sf,
     tidyr,
-    utf8
+    utf8,
+    plotly
 Depends: 
     R (>= 2.10)
 LazyData: true

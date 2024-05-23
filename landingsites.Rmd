@@ -319,7 +319,8 @@ data("georefcatchlocs")
 data("catchdata")
 data("permitdata")
 
-catch.plot <- georef_catch_data(georefcatchlocs, catchdata)
+catch.plot.inter <- georef_catch_data(georefcatchlocs, catchdata)
 
-catch.plot
+#plotly::ggplotly(catch.plot.inter)
+
 ```

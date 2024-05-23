@@ -2,9 +2,8 @@
 #'
 #' @param catchdata 
 #' @param georefcatchlocs
-#' @param pac.buffer 
 #'
-#' @return georefcatchlocs
+#' @return catch.plot Plot of catch locations in the Gulf of California and point in the Pacific that were eliminated
 #' @export
 #'
 #' @examples
@@ -12,8 +11,8 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
   
   georeff.codes <- georefcatchlocs %>% 
     dplyr::distinct(catch_code, deci_lat, deci_lon) 
-
-  fresh.sp <- c("TRUCHA","CARPA", "BAGRE")
+  
+  fresh.sp <- c("TRUCHA","CARPA", "BAGRE", "ORNATO", "PECES DE ORNATO")
   
   catch.code <- catchdata %>%
     keep_when(!species %in% fresh.sp) %>%
@@ -68,31 +67,46 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
     sf::st_transform(crs = 4269) 
   
   pac.buffer <- pac.polygon %>% #https://epsg.io/4269#google_vignette
-   sf::st_buffer(0.5)
-
-#  gc.buffer <- gc.polygon %>% #https://epsg.io/4269#google_vignette
-#    sf::st_buffer(0.5)
+    sf::st_buffer(0.5)
+  
+  #  gc.buffer <- gc.polygon %>% #https://epsg.io/4269#google_vignette
+  #    sf::st_buffer(0.5)
   
   catch.pacific <- catch.spatial %>% 
     sf::st_difference(pac.buffer) 
-
+  
   catch.plot <- ggplot2::ggplot(gc.polygon) + 
     ggplot2::geom_sf() +
     ggplot2::geom_sf(data = catch.spatial, color = "red") +
     ggplot2::geom_sf(data = catch.pacific, color = "blue") +
-    ggplot2::geom_sf(data = pac.polygon)
-
-ggplot2::ggsave(catch.plot, here::here("outputs","catch_plot.png"), width = 10, height = 10)
-    
+    ggplot2::geom_sf(data = pac.polygon) +
+    ggplot2::labs(x = "Longitude",
+                  y="Latitude",
+                  title = "Georeferenced catch data",
+                  subtitle = "Blue points are catch data in the Gulf of California, \n Red points are catch data in the Pacific Ocean")
+  # 
+  
+  ggplot2::ggsave(filename= "catch_plot.png", plot=catch.plot, path=here::here("outputs"), width = 10, height = 10)
   
   catch.geo.locs <- catch.spatial %>% 
     dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
                   deci_lat = sf::st_coordinates(.)[,2]) %>% 
     dplyr::as_tibble() %>% 
     select(-geometry)
-   
+  
   readr::write_csv(catch.geo.locs, here::here("outputs","georefcatch_loc_month.csv"))
   
-  return(catch.plot)
+  catch.plot.inter <- ggplot2::ggplot(gc.polygon) + 
+    ggplot2::geom_sf() +
+    ggplot2::geom_sf(data = catch.pacific, ggplot2::aes(color = species)) +
+    ggplot2::labs(x = "Longitude",
+                  y="Latitude",
+                  title = "Georeferenced catch data",
+                  subtitle = "Colors are different species") +
+    ggplot2::theme_bw() +
+    ggplot2::theme(legend.position = "bottom")
+  
+
+  return(catch.plot.inter)
   
 }
