@@ -94,7 +94,9 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
     dplyr::as_tibble() %>% 
     select(-geometry)
   
-  readr::write_csv(catch.geo.locs, here::here("outputs","georefcatch_loc_month.csv"))
+  readr::write_csv(catch.geo.locs, here::here("outputs","georefcatch_loc.csv"))
+  readr::write_csv(catch.pacific, here::here("outputs","georefcatch_loc_pacific.csv"))
+  
   
   catch.plot.inter <- ggplot2::ggplot(gc.polygon) + 
     ggplot2::geom_sf() +
@@ -105,6 +107,26 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
                   subtitle = "Colors are different species") +
     ggplot2::theme_bw() +
     ggplot2::theme(legend.position = "bottom")
+  
+ggplot2::ggsave(filename= "catch_plot_sp.png", plot=catch.plot.inter, path=here::here("outputs"), width = 10, height = 10)
+  
+  
+  catch.ngoc <- catch.pacific %>% 
+    dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
+                  deci_lat = sf::st_coordinates(.)[,2]) %>% 
+    keep_when(deci_lat>28)
+  
+  catch.plot.ngoc <- ggplot2::ggplot(gc.polygon) + 
+    ggplot2::geom_sf() +
+    ggplot2::geom_sf(data = catch.ngoc, ggplot2::aes(color = species)) +
+    ggplot2::labs(x = "Longitude",
+                  y="Latitude",
+                  title = "Georeferenced catch data",
+                  subtitle = "Colors are different species") +
+    ggplot2::theme_bw() +
+    ggplot2::theme(legend.position = "bottom")
+  
+  ggplot2::ggsave(filename= "catch_plot_sp.png", plot=catch.plot.inter, path=here::here("outputs"), width = 10, height = 10)
   
 
   return(catch.plot.inter)

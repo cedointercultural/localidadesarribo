@@ -7,12 +7,12 @@
 georef_catch_data(georefcatchlocs, catchdata)
 }
 \arguments{
-\item{catchdata}{}
+\item{georefcatchlocs}{}
 
-\item{pac.buffer}{}
+\item{catchdata}{}
 }
 \value{
-georefcatchlocs
+catch.plot Plot of catch locations in the Gulf of California and point in the Pacific that were eliminated
 }
 \description{
 Georeferrence all catch data
