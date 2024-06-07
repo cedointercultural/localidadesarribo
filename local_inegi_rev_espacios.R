@@ -92,4 +92,4 @@ locs.encontradas <- data.locs %>%
   dplyr::mutate(CVE_LOC= cvegeo, CVE_MUN = paste0(cve_ent, cve_agem)) %>%
   dplyr::select(NOM_ENT, NOM_LOC_ORIGINAL,nom_loc, CVE_LOC, CVE_MUN, latitud, longitud)
 
-readr::write_csv(locs.encontradas, here::here("localidades_pesqueras_encontradas.csv"))
+readr::write_csv(locs.encontradas, here::here("outputs","localidades_pesqueras_encontradas.csv"))

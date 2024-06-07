@@ -278,7 +278,7 @@ locs.pesca <- clean_locs_pesca()
 ents.coast.selecc <- toupper(c("Baja California Sur", "Baja California", "Sonora", "Sinaloa", "Nayarit", "Jalisco"))
 coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin-ASCII")
 
-inegi.cost.comm.all  <- readr::read_csv(paste0("~/coastalvulnerability-inputs/processed_data/all_coastal_communities_INEGI.csv")) %>% 
+inegi.cost.comm.all  <- readr::read_csv(here::here("inputs","all_coastal_communities_INEGI.csv")) %>% 
   mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
   mutate(NOM_MUN = stringi::stri_trans_general(str = NOM_MUN, id = "Latin-ASCII"), NOM_MUN = toupper(NOM_MUN)) %>% 
   mutate(NOM_LOC = stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
@@ -324,3 +324,59 @@ catch.plot.inter <- georef_catch_data(georefcatchlocs, catchdata)
 #plotly::ggplotly(catch.plot.inter)
 
 ```
+Grid for environmental data
+```{r}
+
+catch.geo.pacific <- readr::read_csv(here::here("outputs","georefcatch_loc_pacific.csv"))
+ 
+
+catch.pacific.spatial <- sf::st_as_sf(catch.geo.pacific, coords = c("deci_lon", "deci_lat"), crs = 4326)
+
+sf::sf_use_s2(FALSE)
+
+gc.polygon <- sf::st_read(here::here("data-raw","SHP","Golfo_california_wetland_poly_WGS84.shp")) %>%   
+    sf::st_transform(crs = 4269) %>% 
+    sf::st_make_valid()
+#make grid at scale of fines oceanographic data
+
+#simplify GOC polygon otherwise it takes too much memory for intersection
+#https://www.r-bloggers.com/2021/03/simplifying-geospatial-features-in-r-with-sf-and-rmapshaper/
+gc.polygon.simple <- sf::st_simplify(mv, preserveTopology = FALSE, dTolerance = 1000)
+
+#0.083° × 0.083° degree grid Global Ocean Physics Reanalysis
+#31 Dec 1992 to 26 Feb 2024 50 vertical levels
+#https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_PHY_001_030/description
+#0.25° × 0.25° degree grid Global Ocean Biogeochemistry Hindcast
+#1993-2019 75 vertical levels
+
+gc.polygon.grid <- sf::st_make_grid(gc.polygon.simple, cellsize = c(0.083, 0.083), what = "polygons") %>% 
+  sf::st_as_sf() %>% 
+  sf::st_set_crs(4269) 
+
+#CONTINUE HERE
+#could also calculate distance to nearest grid point and then el;iminate points that fall in land with a land mass polygon
+gc.ocean.grid <- sf::st_intersection(gc.polygon.grid, gc.polygon.simple) 
+
+gc.grid.plot <- ggplot2::ggplot(gc.polygon.grid) + 
+    ggplot2::geom_sf() +
+    ggplot2::geom_sf(data = gc.polygon, color = "red", alpha=0.4) +
+    ggplot2::geom_sf(data = catch.pacific.spatial, color = "darkblue") +
+    ggplot2::labs(x = "Longitude",
+                  y="Latitude",
+                  title = "Georeferenced catch data",
+                  subtitle = "Grid 0.083° × 0.083° degree")
+
+gc.grid.plot
+
+get_pointdistance<- function(eachcatchpoint, catch.pacific.spatial, gc.ocean.grid){
+  
+  this.catch.spatial <- catch.pacific.spatial[eachcatchpoint,]
+  
+  this.distance <- st_distance(this.catch.spatial, gc.ocean.grid)
+  
+}
+
+
+  # 
+```
+

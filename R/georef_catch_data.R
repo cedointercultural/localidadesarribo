@@ -93,9 +93,16 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
                   deci_lat = sf::st_coordinates(.)[,2]) %>% 
     dplyr::as_tibble() %>% 
     select(-geometry)
+ 
+  catch.geo.pacific <- catch.pacific %>% 
+    dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
+                  deci_lat = sf::st_coordinates(.)[,2]) %>% 
+    dplyr::as_tibble() %>% 
+    select(-geometry)
   
+   
   readr::write_csv(catch.geo.locs, here::here("outputs","georefcatch_loc.csv"))
-  readr::write_csv(catch.pacific, here::here("outputs","georefcatch_loc_pacific.csv"))
+  readr::write_csv(catch.geo.pacific, here::here("outputs","georefcatch_loc_pacific.csv"))
   
   
   catch.plot.inter <- ggplot2::ggplot(gc.polygon) + 
