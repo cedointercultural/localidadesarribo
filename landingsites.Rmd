@@ -34,7 +34,7 @@ Uses table with corrected names to standarize names of locations and fishery off
 Combines catch files for all years and selects landing site, state, fishery office, species, weight, and catch value.
 Resulting data is imported as catch rmd into the package
 
-```{r get catch data, include=FALSE}
+```{r get catch data, echo=TRUE}
 
 locs.pesca <- clean_locs_pesca()
 
@@ -74,7 +74,7 @@ devtools::load_all() # restarts and loads
 
 Gets list of fishery offices from catch records
 Uses standarized catch data to get unique fishery offices and georeference them
-```{r}
+```{r Get fishery offices}
 
 locs.pesca <- clean_locs_pesca()
 
@@ -93,7 +93,8 @@ fishery.office.table <- fishery.offices.list %>%
   dplyr::bind_rows() %>% 
   dplyr::arrange(NOM_LOC,NOM_ENT)
 
-fishery.spatial <- sf::st_as_sf(fishery.office.table, coords = c("deci_lon", "deci_lat"), crs = 4326) 
+fishery.spatial <- sf::st_as_sf(fishery.office.table, coords = c("deci_lon", "deci_lat"), crs = 4326) %>% 
+  sf::st_transform(4269)
 
 fishery.spatial %>% 
   sf::st_write(here::here("outputs","fishery_offices.shp"), append=FALSE)
@@ -116,7 +117,7 @@ devtools::load_all() # restarts and loads
 ```
 
 Get locations from catch records
-```{r}
+```{r Get locations from catch, echo=TRUE}
 
 locs.pesca <- clean_locs_pesca()
 
@@ -145,7 +146,7 @@ devtools::load_all() # restarts and loads
 
 #Create table georeferrenced locations from INEGI & Google and add distance to nearest fishery office
 
-```{r location table, include=FALSE}
+```{r location table, echo=TRUE}
 
 locs.pesca <- clean_locs_pesca()
 
@@ -217,7 +218,7 @@ georef.locs <- dplyr::bind_rows(locs.census, locs.inegi, locs.google, locs.pesca
 
 georef.locs.sp <- georef.locs %>% 
   sf::st_as_sf(coords = c("deci_lon", "deci_lat"), crs = 4326) %>% 
-  sf::st_set_crs(4326)
+  sf::st_transform(4269)
 
 #Add distance to nearest fishery office to help resolve duplicates when georeferincing a catch 
 
@@ -247,7 +248,7 @@ devtools::load_all() # restarts and loads
 
 
 Georeference unique locations
-```{r}
+```{r Georeference locations, echo=TRUE}
 
 data("catchlocations")
 
@@ -269,7 +270,7 @@ devtools::load_all() # restarts and loads
 Get permit information from the Registro Nacional de Pesca y Acuacultura RNPA and georeference
 https://www.gob.mx/conapesca/documentos/registro-nacional-de-pesca-y-acuacultura-rnpa
 
-```{r get catch, message=TRUE, warning=TRUE, include=FALSE}
+```{r Get permit data, echo=TRUE, message=TRUE, warning=TRUE}
 
 data("georeflocskm")
 
@@ -311,75 +312,231 @@ readr::write_csv(permitdata, here::here("outputs","rnp_fishery_permits.csv"))
 ```
 
 
-
 Georeference all catch data
-```{r}
+```{r Georeference catch, echo=TRUE}
 
 data("georefcatchlocs")
 data("catchdata")
 data("permitdata")
 
+if(file.exists(outputs/gpkg_grid.gpkg)) file.remove(outputs/gpkg_grid.gpkg)
+
 catch.plot.inter <- georef_catch_data(georefcatchlocs, catchdata)
 
 #plotly::ggplotly(catch.plot.inter)
 
+catch.plot.inter
+
 ```
-Grid for environmental data
-```{r}
 
-catch.geo.pacific <- readr::read_csv(here::here("outputs","georefcatch_loc_pacific.csv"))
+Create grid for environmental data
+```{r Create grid, echo=TRUE}
 
-catch.pacific.spatial <- sf::st_as_sf(catch.geo.pacific, coords = c("deci_lon", "deci_lat"), crs = 4326) %>% 
-  sf::st_transform(4269)
+gc.grid.plot <- make_grid()
 
-sf::sf_use_s2(FALSE)
+gc.grid.plot 
+```
 
-gc.polygon <- sf::st_read(here::here("data-raw","SHP","Golfo_california_wetland_poly_WGS84.shp")) %>%   
-    sf::st_transform(crs = 4269) %>% 
-    sf::st_make_valid()
-#make grid at scale of fines oceanographic data
+Download GLORYS data
+```{r download GLORYS, eval=FALSE, include=FALSE}
+# Script to download GLORYS data directly from Copernicus Servers
+# Requires a Copernicus marine service account
+# https://data.marine.copernicus.eu/products
 
-#simplify GOC polygon otherwise it takes too much memory for intersection
-#https://www.r-bloggers.com/2021/03/simplifying-geospatial-features-in-r-with-sf-and-rmapshaper/
-sf::sf_use_s2(TRUE)
+#mount storage bucket
 
-gc.polygon.simple <- sf::st_simplify(gc.polygon, preserveTopology = FALSE, dTolerance = 3000)
+#if cannot connect to servers
+# sudo systemd-resolve --flush-caches
+# sudo resolvectl flush-caches
+# sudo nmcli general reload dns-full
+#to mount bucket 
+#https://cloud.google.com/storage/docs/gcsfuse-mount#authenticate_requests
+#https://medium.com/google-cloud/how-to-use-gcs-bucket-with-gcp-vm-using-gsutil-and-mounting-as-a-filesystem-9139b812db84
+#this can also be run if you lose write access to the storage bucket
+#gcloud auth application-default login --no-launch-browser
+#gcsfuse cedo_model_data storagebucket
 
 
-#0.083° × 0.083° degree grid Global Ocean Physics Reanalysis
-#31 Dec 1992 to 26 Feb 2024 50 vertical levels
-#https://data.marine.copernicus.eu/product/GLOBAL_MULTIYEAR_PHY_001_030/description
-#0.25° × 0.25° degree grid Global Ocean Biogeochemistry Hindcast
-#1993-2019 75 vertical levels
+#system("sudo chmod -R a+rwx ~/storagebucket/GLORYS", wait = TRUE)
 
-gc.polygon.grid <- sf::st_make_grid(gc.polygon.simple, cellsize = c(0.083, 0.083), what = "polygons") %>% 
-  sf::st_as_sf() %>% 
-  sf::st_set_crs(4269) 
+#Install and load dependencies
+#system("pip install motuclient==1.8.4")
+#install.packages("reticulate")
+library(reticulate)
+library(lubridate)
+#only need to create environment first time
+#install_python() 
+#virtualenv_create(envname = "copernicus")
+#virtualenv_install("copernicus", packages = c("copernicusmarine"))
+use_virtualenv("copernicus", required = TRUE)
+#py_install("copernicusmarine")
 
-#CONTINUE HERE
-#could also calculate distance to nearest grid point and then el;iminate points that fall in land with a land mass polygon
-gc.ocean.grid <- sf::st_intersection(gc.polygon.grid, gc.polygon.simple) 
+cm <- import("copernicusmarine")
 
-gc.grid.plot <- ggplot2::ggplot(gc.ocean.grid) + 
-    ggplot2::geom_sf() +
-    ggplot2::geom_sf(data = gc.polygon.simple, color = "red", alpha=0.4) +
-    ggplot2::geom_sf(data = catch.pacific.spatial, color = "darkblue") +
-    ggplot2::labs(x = "Longitude",
-                  y="Latitude",
-                  title = "Georeferenced catch data",
-                  subtitle = "Grid 0.083° × 0.083° degree")
+#Specify lat/lon/depth bounds
+#Gulf of California 
+#-116.1407,20.44,-105.1029,32.0482
+#Southeast limit at Cabo Corrientes 20.43386153865933, -105.69209230968688
 
-gc.grid.plot
+min_lon <- -116.1407
+max_lon <- -105.1000
+min_lat  <- 20.4339
+max_lat  <- 32.0482
 
-get_pointdistance<- function(eachcatchpoint, catch.pacific.spatial, gc.ocean.grid){
+#only needed once unless credentials need to be updated
+#cm$login("hmorzarialuna", "#esBmZe7P_H7r_i")
+
+#Set directories
+out_dir = paste0("~/storagebucket/GLORYS/monthly")
+
+#Specify GLORYS file from manual https://catalogue.marine.copernicus.eu/documents/PUM/CMEMS-GLO-PUM-001-030.pdf
+
+#GLORYS monthly available time series is 04/12/1991 to 31/06/2021
+data.set.id <- "cmems_mod_glo_phy_my_0.083deg_P1M-m"
+var.id <- "thetao"
+#set time period
+#start.time.interval <- seq(as.Date("2018-01-01"), length=42, by="1 month") 
+#end.time.interval <- seq(as.Date("2018-02-01"), length=42, by="1 month") - 1
+start.time.interval <- seq(as.Date("2018-09-01"), length=34, by="1 month") 
+end.time.interval <- seq(as.Date("2018-10-01"), length=34, by="1 month") - 1
+#set length of time period
+entry.interval <- 1:length(start.time.interval)
+#download data
+lapply(entry.interval, get_monthlyglorys, start.time.interval, end.time.interval, min_lon, max_lon, min_lat, max_lat, out_dir, data.set.id)
+
+
+#GLORYS monthly available time series is 01/07/2021 to M-4 (current month - 4), need to get data 01/07/2021 12/31/2023
+data.set.id <- "cmems_mod_glo_phy_myint_0.083deg_P1M-m"
+var.id <- "thetao"
+#set time period
+start.time.interval <- seq(as.Date("2021-07-01"), length=30, by="1 month") 
+end.time.interval <- seq(as.Date("2021-08-01"), length=30, by="1 month") - 1
+#set lenght of time period
+entry.interval <- 1:length(start.time.interval)
+#download data
+lapply(entry.interval, get_monthlyglorys, start.time.interval, end.time.interval, min_lon, max_lon, min_lat, max_lat, out_dir, data.set.id)
+
+#1991-2016 climatology
+data.set.id <- "cmems_mod_glo_phy_my_0.083deg-climatology_P1M-m"
+
+#Set directories
+out_dir = paste0("~/storagebucket/GLORYS/climatology")
+
+#download data
+get_climatologyglorys(min_lon, max_lon, min_lat, max_lat, out_dir, data.set.id)
+
+
+#Get biogeochemistry data
+#https://catalogue.marine.copernicus.eu/documents/PUM/CMEMS-GLO-PUM-001-029.pdf
+#data.set.id <- "cmems_mod_glo_bgc_my_0.083deg_P1M-m"
+#var.id <- "chl"
+
+```
+
+
+map GLORYS data
+```{r Map GLORYS data, echo=TRUE}
+
+catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch')
+
+#select example GLORYS data
+glorys.file <- paste0("/home/atlantis/storagebucket/GLORYS/monthly/","cmems_mod_glo_phy_myint_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_2023-08-01.nc")
+#esm.file  <- here("delta_method_final_outputs","GFDL-CM4_delta_thetao_2050.nc")
+#glorys.esm.file  <- here("GLORYS_ESM_final","GFDL-CM4_glorys_thetao_2050.nc")
+
+glorys.nc  <-  tidync::tidync(glorys.file) %>%
+  tidync::hyper_tibble() %>%
+  dplyr::filter(depth == min(depth))
+
+# esm.nc = tidync(esm.file)%>%
+#   hyper_tibble()%>%
+#   filter(lev == min(lev))
+# 
+# glorys.esm.nc = tidync(glorys.esm.file)%>%
+#   hyper_tibble()%>%
+#   filter(lev == min(lev))
+
+catch.geo.pacific <- catch.pacific.spatial %>% 
+    dplyr::mutate(longitude = sf::st_coordinates(.)[,1],
+                  latitude = sf::st_coordinates(.)[,2]) %>% 
+    dplyr::as_tibble() 
+
+glorys.goc <- ggplot2::ggplot(data = glorys.nc, ggplot2::aes(x= longitude, y = latitude, color = thetao))+
+  ggplot2::geom_point()+
+#  ggplot2::annotation_map(mapdata::map('worldHires'),fill = 'grey70',alpha=0.3) +
+  ggplot2::labs(title="2023-08-01",
+                color = "Sea salinity") +
+  ggplot2::geom_point(data = catch.geo.pacific, color = "black") 
   
-  this.catch.spatial <- catch.pacific.spatial[eachcatchpoint,]
-  
-  this.distance <- sf::st_distance(this.catch.spatial, gc.ocean.grid)
-  
+
+glorys.goc
+```
+
+
+
+```{r Calculate distance to grid, echo=FALSE}
+#Calculate distance of each catch location to the grid and subset selected grid polygons
+
+#QUESTION WHAT DEPTH TO SELECT
+#QUESTION LEAVE SEPARATE DEPTHS OR AVERAGE
+
+this.depth <- 10
+gc.ocean.grid <- sf::st_read(dsn="outputs/goc_grid.shp") %>% 
+  dplyr::mutate(id_pol=1:nrow(.))
+
+catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch')
+catch.nopoints <- 1:nrow(catch.pacific.spatial)
+#Southeast limit at Cabo Corrientes 20.43386153865933, -105.69209230968688
+
+
+
+glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly", full.names = TRUE)
+
+
+get_pointtemp <- function(eachcatchpoint, this.depth, catch.pacific.spatial, gc.ocean.grid, glorys.files){
+
+this.catch.spatial <- catch.pacific.spatial[eachcatchpoint,]
+
+this.distance <- sf::st_distance(this.catch.spatial, gc.ocean.grid)
+
+min.distance <- 2*(min(this.distance))
+
+this.catch.geo <- this.catch.spatial %>% 
+  dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
+                deci_lat = sf::st_coordinates(.)[,2]) %>% 
+  dplyr::as_tibble() %>% 
+  select(-geom)
+
+indices <- which(this.distance < units::set_units(min.distance, "m"), arr.ind = TRUE)
+
+df.dist <- as.data.frame(indices)
+df.dist$dist <- as.numeric(this.distance[indices])
+
+catch.indices <- df.dist$col
+
+this.ocean.grid <- gc.ocean.grid %>% 
+  dplyr::filter(id_pol %in% catch.indices)
+
+glorys.files.no <- 1:length(glorys.files)
+
+list.tempvalues <- list()
+
+list.tempvalues <- lapply(glorys.files.no, get_glorysdata, glorys.files, this.ocean.grid, this.catch.geo, this.depth, list.tempvalues)
+
+this.point.tempdata <- dplyr::bind_rows(list.tempvalues)
+
+
+    
+}
+
+#example to get distance to each point and subset grid
+#this.ocean.grid <- lapply(catch.nopoints, get_pointdistance, catch.pacific.spatial, gc.ocean.grid)
+
+#plot(this.ocean.grid)
 }
 
 
-  # 
-```
 
+
+
+```

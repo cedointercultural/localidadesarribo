@@ -52,7 +52,9 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
   all.catch.code <- rbind(georef.catch.data, rnp.geoloc) %>% 
     dplyr::group_by(rnp_code, NOM_LOC, NOM_ENT, fishery_office, species, landed_w_kg, value_mxn,
                     year, month) %>%
-    summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop')
+    summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop') %>% 
+    #eliminate all locations south of Cabo Corrientes 20.43386153865933, -105.69209230968688
+    keep_when(deci_lat>20.43386153865933)
   
   catch.spatial <- all.catch.code %>% 
     sf::st_as_sf(coords = c("deci_lon", "deci_lat"), crs = 4269)
@@ -75,6 +77,9 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
   catch.pacific <- catch.spatial %>% 
     sf::st_difference(pac.buffer) 
   
+  sf::st_write(catch.pacific, dsn="outputs/gpkg_grid.gpkg", layer='goc_catch', layer_options = "OVERWRITE=YES", append = FALSE)
+  
+  
   catch.plot <- ggplot2::ggplot(gc.polygon) + 
     ggplot2::geom_sf() +
     ggplot2::geom_sf(data = catch.spatial, color = "red") +
@@ -82,7 +87,7 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
     ggplot2::geom_sf(data = pac.polygon) +
     ggplot2::labs(x = "Longitude",
                   y="Latitude",
-                  title = "Georeferenced catch data",
+                  title = paste0("Georeferenced catch data:", nrow(catch.spatial), " points"),
                   subtitle = "Blue points are catch data in the Gulf of California, \n Red points are catch data in the Pacific Ocean")
   # 
   
@@ -133,9 +138,9 @@ ggplot2::ggsave(filename= "catch_plot_sp.png", plot=catch.plot.inter, path=here:
     ggplot2::theme_bw() +
     ggplot2::theme(legend.position = "bottom")
   
-  ggplot2::ggsave(filename= "catch_plot_sp.png", plot=catch.plot.inter, path=here::here("outputs"), width = 10, height = 10)
+  ggplot2::ggsave(filename= "catch_plot_ngoc.png", plot=catch.plot.ngoc, path=here::here("outputs"), width = 10, height = 10)
   
 
-  return(catch.plot.inter)
+  return(catch.plot)
   
 }
