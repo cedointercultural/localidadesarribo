@@ -26,6 +26,10 @@ import::from(dplyr, mutate, distinct, select, group_by, summarise, keep_when = f
 #to fix access with google
 #https://github.com/orgs/community/discussions/39210
 
+#to fix access issues
+#https://www.namehero.com/blog/solve-temporary-failure-in-name-resolution-error-in-linux/
+
+
 ```
 
 Get catch from official record. 
@@ -397,8 +401,8 @@ var.id <- "thetao"
 #set time period
 #start.time.interval <- seq(as.Date("2018-01-01"), length=42, by="1 month") 
 #end.time.interval <- seq(as.Date("2018-02-01"), length=42, by="1 month") - 1
-start.time.interval <- seq(as.Date("2018-09-01"), length=34, by="1 month") 
-end.time.interval <- seq(as.Date("2018-10-01"), length=34, by="1 month") - 1
+start.time.interval <- seq(as.Date("2018-01-01"), length=8, by="1 month") 
+end.time.interval <- seq(as.Date("2018-02-01"), length=8, by="1 month") - 1
 #set length of time period
 entry.interval <- 1:length(start.time.interval)
 #download data
@@ -465,7 +469,7 @@ glorys.goc <- ggplot2::ggplot(data = glorys.nc, ggplot2::aes(x= longitude, y = l
   ggplot2::geom_point()+
 #  ggplot2::annotation_map(mapdata::map('worldHires'),fill = 'grey70',alpha=0.3) +
   ggplot2::labs(title="2023-08-01",
-                color = "Sea salinity") +
+                color = "Sea temperature") +
   ggplot2::geom_point(data = catch.geo.pacific, color = "black") 
   
 
@@ -474,69 +478,119 @@ glorys.goc
 
 
 
-```{r Calculate distance to grid, echo=FALSE}
-#Calculate distance of each catch location to the grid and subset selected grid polygons
+```{r Calculate distance to nearest point in raster, echo=FALSE}
+#Calculate distance of each catch location to the nearest raster cell
 
-#QUESTION WHAT DEPTH TO SELECT
-#QUESTION LEAVE SEPARATE DEPTHS OR AVERAGE
+this.depth <- 10 #Most species are not caught deeper
+# gc.ocean.grid <- sf::st_read(dsn="outputs/goc_grid.shp") %>% 
+#   dplyr::mutate(id_pol=1:nrow(.))
 
-this.depth <- 10
-gc.ocean.grid <- sf::st_read(dsn="outputs/goc_grid.shp") %>% 
-  dplyr::mutate(id_pol=1:nrow(.))
-
-catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch')
-catch.nopoints <- 1:nrow(catch.pacific.spatial)
+catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch') %>% 
+  dplyr::mutate(catch_id = 1:nrow(.)) %>% 
+    mutate(month_no = dplyr::case_when(
+      month  == "DICIEMBRE" ~ "12",
+      month == "NOVIEMBRE" ~ "11",
+      month == "OCTUBRE" ~ "10",
+      month == "SEPTIEMBRE" ~ "09",
+      month == "AGOSTO" ~ "08",
+      month == "JULIO" ~ "07",
+      month == "JUNIO" ~ "06",
+      month == "MAYO" ~ "05",
+      month == "ABRIL" ~ "04",
+      month == "MARZO" ~ "03",
+      month == "FEBRERO" ~ "02",
+      month == "ENERO" ~ "01"))
 #Southeast limit at Cabo Corrientes 20.43386153865933, -105.69209230968688
 
+catch.geo <- catch.pacific.spatial %>% 
+    dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
+                  deci_lat = sf::st_coordinates(.)[,2]) %>% 
+    dplyr::as_tibble() %>% 
+    select(-geom) 
 
+start.time.interval <- paste(rep(seq(from=2018, to=2023),12),c("01","02","03","04","05","06","07","08","09","10","11","12"), sep = "-")
 
 glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly", full.names = TRUE)
 
 
-get_pointtemp <- function(eachcatchpoint, this.depth, catch.pacific.spatial, gc.ocean.grid, glorys.files){
+time.interval <- 1:length(start.time.interval)
+time.interval = 1
 
-this.catch.spatial <- catch.pacific.spatial[eachcatchpoint,]
+#temp.catch.points <- lapply(time.interval, get_nearestpointtemp, this.depth, catch.pacific.spatial, glorys.files, catch.geo, start.time.interval)
+rbenchmark::benchmark(temp.catch.points <- parallel::mclapply(time.interval, get_nearestpointtemp, this.depth, catch.pacific.spatial, glorys.files, catch.geo, start.time.interval, out.dir = "/home/atlantis/storagebucket/captemp"))
 
-this.distance <- sf::st_distance(this.catch.spatial, gc.ocean.grid)
+plot.catch <- ggplot2::ggplot(data = catch.pacific.spatial, ggplot2::aes(x= year, y = landed_w_kg, color = species))+
+  ggplot2::geom_line()+
+  ggplot2::labs(title="Catch time series") +
+  ggplot2::facet_wrap(.~species)
 
-min.distance <- 2*(min(this.distance))
+```
+```{r}
+reticulate::py_install("esgf-pyclient", pip=TRUE)
+reticulate::py_install("xarray", pip=TRUE)
+reticulate::py_install("matplotlib")
+reticulate::py_install("numpy", pip=TRUE)
+reticulate::py_install("cftime", pip=TRUE)
+reticulate::py_install("gcsfs", pip=TRUE)
+reticulate::py_install("pandas", pip=TRUE)
+reticulate::py_install("zarr", pip=TRUE)
+reticulate::py_install("netcdf4", pip=TRUE)
+reticulate::py_install("h5netcdf", pip=TRUE)
+reticulate::py_install("pydap", pip=TRUE)
+reticulate::py_install("scipy", pip=TRUE)
+reticulate::py_install("intake", pip=TRUE)
+reticulate::py_install("intake_esm", pip=TRUE)
+reticulate::py_install("xmip", pip=TRUE)
+reticulate::py_install("datatree", pip=TRUE)
+reticulate::py_install("cartopy", pip=TRUE)
+reticulate::py_install("xesmf", pip=TRUE)
+reticulate::py_install("esmpy")
+reticulate::py_install("ESMF", pip=TRUE)
+```
 
-this.catch.geo <- this.catch.spatial %>% 
-  dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
-                deci_lat = sf::st_coordinates(.)[,2]) %>% 
-  dplyr::as_tibble() %>% 
-  select(-geom)
-
-indices <- which(this.distance < units::set_units(min.distance, "m"), arr.ind = TRUE)
-
-df.dist <- as.data.frame(indices)
-df.dist$dist <- as.numeric(this.distance[indices])
-
-catch.indices <- df.dist$col
-
-this.ocean.grid <- gc.ocean.grid %>% 
-  dplyr::filter(id_pol %in% catch.indices)
-
-glorys.files.no <- 1:length(glorys.files)
-
-list.tempvalues <- list()
-
-list.tempvalues <- lapply(glorys.files.no, get_glorysdata, glorys.files, this.ocean.grid, this.catch.geo, this.depth, list.tempvalues)
-
-this.point.tempdata <- dplyr::bind_rows(list.tempvalues)
+```{python python cmip6, eval=FALSE, include=FALSE}
+from xmip.preprocessing import combined_preprocessing
+from datatree import DataTree
+import cartopy.crs as ccrs
+```
 
 
+```{python}
+from pyesgf.search import SearchConnection
+import gcsfs
+import pandas as pd
+import xarray as xr
+import numpy as np
+import cftime
+import zarr
+import netcdf4
+import scipy
+import pydap
+import h5netcdf
+import matplotlib
+
+
+conn = SearchConnection('https://esgf-data.dkrz.de/esg-search', distrib=True)
+ctx = conn.new_context(facets='project=CMIP6', source_id='MPI-ESM1-2-HR',  experiment_id='ssp585', variable='tos', frequency='mon', variant_label='r1i1p1f1')
+
+ctx.hit_count
+
+result = ctx.search()[2]
+result.dataset_id
+
+files = result.file_context().search()
+for file in files:
+    print(file.opendap_url)
     
-}
+ds = xr.open_dataset(files[0].opendap_url)
+print(ds)    
 
-#example to get distance to each point and subset grid
-#this.ocean.grid <- lapply(catch.nopoints, get_pointdistance, catch.pacific.spatial, gc.ocean.grid)
-
-#plot(this.ocean.grid)
-}
-
-
-
+da = ds['tos']
+da = da.isel(time=slice(0, 1))
+da = da.sel(i=slice(-50, 50), j=slice(0, 50))
+%matplotlib inline
+da.plot()
 
 
 ```
+

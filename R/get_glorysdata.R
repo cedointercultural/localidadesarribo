@@ -13,19 +13,40 @@
 #' @examples
 get_glorysdata <- function(eachglorysfile, glorys.files, this.ocean.grid, this.catch.geo, this.depth, list.tempvalues){
   
+  print(eachglorysfile)
   glorys.file <- glorys.files[eachglorysfile]
+  print(glorys.file)
   
   year_month <- stringr::str_extract(glorys.file, "[0-9]{4}-[0-9]{2}")
+  print(year_month)
   
-  year_sel <- year_month %>% strsplit("-") %>% unlist() %>% .[1]
-  month_sel <- year_month %>% strsplit("-") %>% unlist() %>% .[2]
+  this.date <- paste0(this.catch.geo$year,"-",this.catch.geo$month_no)
   
-  glorys.rast <- terra::rast(glorys.file) %>% 
-    terra::project("EPSG:4269")
-  terra::plot(glorys.rast)
+  if(year_month==this.date){
+    print("Match")
+
+    year_sel <- year_month %>% strsplit("-") %>% unlist() %>% .[1]
+    month_sel <- year_month %>% strsplit("-") %>% unlist() %>% .[2]
+    
+    glorys.rast <- terra::rast(glorys.file) %>% 
+      terra::project("EPSG:4269")
+    
+    terra::plot(glorys.rast)
+    
+    glorys.points <- terra::as.points(glorys.rast)
+    
+    glorys.point.sf <- sf::st_as_sf(glorys.points)
+    
+    this.distance <- sf::st_distance(this.catch.spatial, gc.ocean.grid)
+    
+    
+    this.rast.data <- terra::mask(glorys.rast, this.ocean.grid) %>% 
+      tidyterra::drop_na(.)
+    
+  } else {
+    print("No match")
+  }
   
-  this.rast.data <- terra::mask(glorys.rast, this.ocean.grid) %>% 
-    tidyterra::drop_na(.)
   
   mean.raster <- terra::global(this.rast.data, 'mean', na.rm=TRUE) %>% 
     tibble::rownames_to_column() %>% 
@@ -39,17 +60,12 @@ get_glorysdata <- function(eachglorysfile, glorys.files, this.ocean.grid, this.c
     dplyr::select(-depth_name) %>% 
     dplyr::mutate(depth = paste0("depth_",as.character(depth))) %>% 
     tidyr::pivot_wider(names_from = depth, values_from = mean) %>% 
-    dplyr::mutate(mean_depth = mean.depth, year = year_sel, month = month_sel)
+    dplyr::mutate(mean_temp = mean.depth, year_temp = year_sel, month_temp = month_sel)
   
   this.point.depth <- dplyr::bind_cols(this.catch.geo, depth.temps)
-  
-  glorys.nc = tidync::tidync(this.rast.data) %>%
-    tidync::hyper_tibble()%>%
-    dplyr::filter(depth == min(depth))
-  
-  this.rast.tibble <- tidyterra::as_tibble(this.rast.data) 
-  
-  list.tempvalues[[eachglorysfile]] <- this.rast.tibble
+  print(this.point.depth)
+ 
+  list.tempvalues[[eachglorysfile]] <- this.point.depth
   
   return(list.tempvalues)
   

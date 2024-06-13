@@ -14,10 +14,9 @@ get_pointdistance<- function(eachcatchpoint, catch.pacific.spatial, gc.ocean.gri
   
   this.distance <- sf::st_distance(this.catch.spatial, gc.ocean.grid)
   
-  min.distance <- 2*(min(this.distance))
+  test <- this.distance[this.distance==min(this.distance)]
   
-  #
-  indices <- which(this.distance < units::set_units(min.distance, "m"), arr.ind = TRUE)
+  indices <- which(this.distance == units::set_units(min(this.distance), "m"), arr.ind = TRUE)
   
   df.dist <- as.data.frame(indices)
   df.dist$dist <- as.numeric(this.distance[indices])
