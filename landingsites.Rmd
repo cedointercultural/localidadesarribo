@@ -481,6 +481,8 @@ glorys.goc
 ```{r Calculate distance to nearest point in raster, echo=FALSE}
 #Calculate distance of each catch location to the nearest raster cell
 
+#Calculate distance of each catch location to the nearest raster cell
+
 this.depth <- 10 #Most species are not caught deeper
 # gc.ocean.grid <- sf::st_read(dsn="outputs/goc_grid.shp") %>% 
 #   dplyr::mutate(id_pol=1:nrow(.))
@@ -508,16 +510,17 @@ catch.geo <- catch.pacific.spatial %>%
     dplyr::as_tibble() %>% 
     select(-geom) 
 
-start.time.interval <- paste(rep(seq(from=2018, to=2023),12),c("01","02","03","04","05","06","07","08","09","10","11","12"), sep = "-")
+years.data <- rep(seq(from=2018, to=2023), each = 12)
+start.time.interval <- paste(years.data,c("01","02","03","04","05","06","07","08","09","10","11","12"), sep = "-")
+
+time.interval <- 1:length(start.time.interval)
 
 glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly", full.names = TRUE)
 
+NumberOfCluster <- parallel::detectCores()  #- 1
 
-time.interval <- 1:length(start.time.interval)
-time.interval = 1
+datapoints <- parallel::mclapply(time.interval, get_nearestpointtemp, this.depth, catch.pacific.spatial, glorys.files, catch.geo, start.time.interval, out.dir = "/home/atlantis/storagebucket/captemp", mc.cores = NumberOfCluster)
 
-#temp.catch.points <- lapply(time.interval, get_nearestpointtemp, this.depth, catch.pacific.spatial, glorys.files, catch.geo, start.time.interval)
-rbenchmark::benchmark(temp.catch.points <- parallel::mclapply(time.interval, get_nearestpointtemp, this.depth, catch.pacific.spatial, glorys.files, catch.geo, start.time.interval, out.dir = "/home/atlantis/storagebucket/captemp"))
 
 plot.catch <- ggplot2::ggplot(data = catch.pacific.spatial, ggplot2::aes(x= year, y = landed_w_kg, color = species))+
   ggplot2::geom_line()+
