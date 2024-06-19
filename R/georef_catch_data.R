@@ -12,7 +12,8 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
   georeff.codes <- georefcatchlocs %>% 
     dplyr::distinct(catch_code, deci_lat, deci_lon) 
   
-  fresh.sp <- c("TRUCHA","CARPA", "BAGRE", "ORNATO", "PECES DE ORNATO")
+  #eliminate freshwater and aquarium species 
+  fresh.sp <- c("TRUCHA","CARPA", "BAGRE", "ORNATO", "PECES DE ORNATO", "OTRAS")
   
   catch.code <- catchdata %>%
     keep_when(!species %in% fresh.sp) %>%

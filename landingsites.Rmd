@@ -323,7 +323,7 @@ data("georefcatchlocs")
 data("catchdata")
 data("permitdata")
 
-if(file.exists(outputs/gpkg_grid.gpkg)) file.remove(outputs/gpkg_grid.gpkg)
+if(file.exists("outputs/gpkg_grid.gpkg")) file.remove("outputs/gpkg_grid.gpkg")
 
 catch.plot.inter <- georef_catch_data(georefcatchlocs, catchdata)
 
@@ -478,10 +478,8 @@ glorys.goc
 
 
 
-```{r Calculate distance to nearest point in raster, echo=FALSE}
-#Calculate distance of each catch location to the nearest raster cell
-
-#Calculate distance of each catch location to the nearest raster cell
+```{r Get temp data per point, echo=FALSE}
+#Get temperature for each point from closest raster cell 
 
 this.depth <- 10 #Most species are not caught deeper
 # gc.ocean.grid <- sf::st_read(dsn="outputs/goc_grid.shp") %>% 
@@ -529,71 +527,61 @@ plot.catch <- ggplot2::ggplot(data = catch.pacific.spatial, ggplot2::aes(x= year
 
 ```
 ```{r}
-reticulate::py_install("esgf-pyclient", pip=TRUE)
-reticulate::py_install("xarray", pip=TRUE)
-reticulate::py_install("matplotlib")
-reticulate::py_install("numpy", pip=TRUE)
-reticulate::py_install("cftime", pip=TRUE)
-reticulate::py_install("gcsfs", pip=TRUE)
-reticulate::py_install("pandas", pip=TRUE)
-reticulate::py_install("zarr", pip=TRUE)
-reticulate::py_install("netcdf4", pip=TRUE)
-reticulate::py_install("h5netcdf", pip=TRUE)
-reticulate::py_install("pydap", pip=TRUE)
-reticulate::py_install("scipy", pip=TRUE)
-reticulate::py_install("intake", pip=TRUE)
-reticulate::py_install("intake_esm", pip=TRUE)
-reticulate::py_install("xmip", pip=TRUE)
-reticulate::py_install("datatree", pip=TRUE)
-reticulate::py_install("cartopy", pip=TRUE)
-reticulate::py_install("xesmf", pip=TRUE)
-reticulate::py_install("esmpy")
-reticulate::py_install("ESMF", pip=TRUE)
-```
+catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch') %>% 
+   dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
+                  deci_lat = sf::st_coordinates(.)[,2])
 
-```{python python cmip6, eval=FALSE, include=FALSE}
-from xmip.preprocessing import combined_preprocessing
-from datatree import DataTree
-import cartopy.crs as ccrs
-```
+cluster.locs <- data.table::fread("~/storagebucket/IA-Input-data/data_clas.csv") 
 
+num.clusters <- cluster.locs %>% 
+  dplyr::distinct(Cluster_Label)
+##FIX  
+#remove NA filtering with next data
+catch.cluster.locs <- catch.cluster %>% 
+  dplyr::filter(!is.na(cluster))
 
-```{python}
-from pyesgf.search import SearchConnection
-import gcsfs
-import pandas as pd
-import xarray as xr
-import numpy as np
-import cftime
-import zarr
-import netcdf4
-import scipy
-import pydap
-import h5netcdf
-import matplotlib
+this.cluster <- catch.cluster.locs %>% 
+  dplyr::filter(cluster == 1)
+
+  
+  ch <- st_convex_hull(st_union(this.cluster)) 
+  
+  ch <- st_boundary(this.cluster)
+
+catch.locations <- catch.pacific.spatial %>% 
+   dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
+                  deci_lat = sf::st_coordinates(.)[,2]) %>% 
+    dplyr::as_tibble() %>% 
+    dplyr::distinct(NOM_LOC, deci_lat, deci_lon)
+
+catch.geo.pacific <- readr::read_csv(here::here("outputs","georefcatch_loc_pacific.csv")) %>% 
+  dplyr::distinct(NOM_LOC, deci_lat, deci_lon)
+  
 
 
-conn = SearchConnection('https://esgf-data.dkrz.de/esg-search', distrib=True)
-ctx = conn.new_context(facets='project=CMIP6', source_id='MPI-ESM1-2-HR',  experiment_id='ssp585', variable='tos', frequency='mon', variant_label='r1i1p1f1')
+locs.extra.catch <- catch.geo.pacific %>% dplyr::left_join(cluster.locs, by = c("NOM_LOC", "deci_lat", "deci_lon")) %>% 
+  dplyr::filter(is.na(origin))
 
-ctx.hit_count
 
-result = ctx.search()[2]
-result.dataset_id
+catch.temp <- list.files(path = "/home/atlantis/storagebucket/GLORYS/captemp", full.names = TRUE)
 
-files = result.file_context().search()
-for file in files:
-    print(file.opendap_url)
-    
-ds = xr.open_dataset(files[0].opendap_url)
-print(ds)    
+combine_locs <- function(eachfile){
+  
+ loc.names <-  catch.point <- data.table::fread(eachfile) %>% 
+    distinct(NOM_LOC, deci_lat, deci_lon)
+ print(eachfile)
+ return(loc.names)
+  
+}
+locs.catch <- lapply(catch.temp, combine_locs)
 
-da = ds['tos']
-da = da.isel(time=slice(0, 1))
-da = da.sel(i=slice(-50, 50), j=slice(0, 50))
-%matplotlib inline
-da.plot()
+locs.catch.dis <- locs.catch %>% 
+  dplyr::bind_rows() %>% 
+  distinct(NOM_LOC, deci_lat, deci_lon)
+
+locs.extra.temp <- cluster.locs %>% dplyr::semi_join(locs.catch.dis, by = c("NOM_LOC", "deci_lat", "deci_lon"))
 
 
 ```
+
 
