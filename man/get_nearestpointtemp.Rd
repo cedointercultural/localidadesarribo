@@ -10,7 +10,8 @@ get_nearestpointtemp(
   catch.pacific.spatial,
   glorys.files,
   catch.geo,
-  start.time.interval
+  start.time.interval,
+  out.dir
 )
 }
 \arguments{

@@ -41,7 +41,6 @@ get_nearestpointtemp <- function(this.time.interval, this.depth, catch.pacific.s
     
     this.glorys.file <- grep(this.date, glorys.files, value = TRUE)
     
-    
     glorys.rast <- terra::rast(this.glorys.file) %>% 
       terra::project("EPSG:4269")
     

@@ -517,7 +517,7 @@ glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly",
 
 NumberOfCluster <- parallel::detectCores()  #- 1
 
-datapoints <- parallel::mclapply(time.interval, get_nearestpointtemp, this.depth, catch.pacific.spatial, glorys.files, catch.geo, start.time.interval, out.dir = "/home/atlantis/storagebucket/captemp", mc.cores = NumberOfCluster)
+datapoints <- parallel::mclapply(time.interval, get_nearestpointtemp, this.depth, catch.pacific.spatial, glorys.files, catch.geo, start.time.interval, out.dir = "/home/atlantis/storagebucket/GLORYS/pointtemp", mc.cores = NumberOfCluster)
 
 
 plot.catch <- ggplot2::ggplot(data = catch.pacific.spatial, ggplot2::aes(x= year, y = landed_w_kg, color = species))+
@@ -526,60 +526,45 @@ plot.catch <- ggplot2::ggplot(data = catch.pacific.spatial, ggplot2::aes(x= year
   ggplot2::facet_wrap(.~species)
 
 ```
-```{r}
+
+Get temperature for convex hull created by cluster points
+```{r get cluster temp}
+
 catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch') %>% 
    dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
                   deci_lat = sf::st_coordinates(.)[,2])
 
-cluster.locs <- data.table::fread("~/storagebucket/IA-Input-data/data_clas.csv") 
+cluster.locs <- data.table::fread("~/storagebucket/IA-Input-data/data_clas.csv") %>% 
+  dplyr::filter(!is.na(Cluster_Label)) %>% 
+  dplyr::select(year:deci_lat, Cluster_Label) %>% 
+  sf::st_as_sf(coords = c("deci_lon", "deci_lat"), crs = 4269) %>% 
+  dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
+                deci_lat = sf::st_coordinates(.)[,2])
 
-num.clusters <- cluster.locs %>% 
-  dplyr::distinct(Cluster_Label)
-##FIX  
-#remove NA filtering with next data
-catch.cluster.locs <- catch.cluster %>% 
-  dplyr::filter(!is.na(cluster))
+#use to visualize clusters
+gc.cluster.plot <- cluster.locs %>% 
+  mutate(clusters=as.factor(Cluster_Label)) %>% 
+    ggplot2::ggplot() +
+    ggplot2::geom_sf() +
+    ggplot2::geom_sf(ggplot2::aes(color = clusters), alpha=0.4) +
+   ggplot2::labs(x = "Longitude",
+                  y="Latitude",
+                  title = "Georeferenced catch data",
+                  subtitle = "Grid 0.083° × 0.083° degree")
+          
+gc.cluster.plot    
+num.clusters <- unique(cluster.locs$Cluster_Label)
 
-this.cluster <- catch.cluster.locs %>% 
-  dplyr::filter(cluster == 1)
+years.data <- rep(seq(from=2018, to=2023), each = 12)
+start.time.interval <- paste(years.data,c("01","02","03","04","05","06","07","08","09","10","11","12"), sep = "-")
 
-  
-  ch <- st_convex_hull(st_union(this.cluster)) 
-  
-  ch <- st_boundary(this.cluster)
+time.interval <- 1:length(start.time.interval)
 
-catch.locations <- catch.pacific.spatial %>% 
-   dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
-                  deci_lat = sf::st_coordinates(.)[,2]) %>% 
-    dplyr::as_tibble() %>% 
-    dplyr::distinct(NOM_LOC, deci_lat, deci_lon)
+glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly", full.names = TRUE)
 
-catch.geo.pacific <- readr::read_csv(here::here("outputs","georefcatch_loc_pacific.csv")) %>% 
-  dplyr::distinct(NOM_LOC, deci_lat, deci_lon)
-  
+NumberOfCluster <- parallel::detectCores()  #- 1
 
-
-locs.extra.catch <- catch.geo.pacific %>% dplyr::left_join(cluster.locs, by = c("NOM_LOC", "deci_lat", "deci_lon")) %>% 
-  dplyr::filter(is.na(origin))
-
-
-catch.temp <- list.files(path = "/home/atlantis/storagebucket/GLORYS/captemp", full.names = TRUE)
-
-combine_locs <- function(eachfile){
-  
- loc.names <-  catch.point <- data.table::fread(eachfile) %>% 
-    distinct(NOM_LOC, deci_lat, deci_lon)
- print(eachfile)
- return(loc.names)
-  
-}
-locs.catch <- lapply(catch.temp, combine_locs)
-
-locs.catch.dis <- locs.catch %>% 
-  dplyr::bind_rows() %>% 
-  distinct(NOM_LOC, deci_lat, deci_lon)
-
-locs.extra.temp <- cluster.locs %>% dplyr::semi_join(locs.catch.dis, by = c("NOM_LOC", "deci_lat", "deci_lon"))
+ parallel::mclapply(time.interval, get_meanclustertemp, glorys.files, cluster.locs, num.clusters, time.interval, start.time.interval, out.dir = "/home/atlantis/storagebucket/GLORYS/clustertemp", mc.cores = NumberOfCluster)
 
 
 ```
