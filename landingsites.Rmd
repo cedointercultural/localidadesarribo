@@ -422,8 +422,6 @@ lapply(entry.interval, get_monthlyglorys, start.time.interval, end.time.interval
 
 #1991-2016 climatology
 data.set.id <- "cmems_mod_glo_phy_my_0.083deg-climatology_P1M-m"
-
-#Set directories
 out_dir = paste0("~/storagebucket/GLORYS/climatology")
 
 #download data
@@ -476,7 +474,7 @@ glorys.goc <- ggplot2::ggplot(data = glorys.nc, ggplot2::aes(x= longitude, y = l
 glorys.goc
 ```
 
-
+Get temperature data for each point
 
 ```{r Get temp data per point, echo=FALSE}
 #Get temperature for each point from closest raster cell 
@@ -567,6 +565,14 @@ NumberOfCluster <- parallel::detectCores()  #- 1
  parallel::mclapply(time.interval, get_meanclustertemp, glorys.files, cluster.locs, num.clusters, time.interval, start.time.interval, out.dir = "/home/atlantis/storagebucket/GLORYS/clustertemp", mc.cores = NumberOfCluster)
 
 
+```
+```{r}
+#Climatology GLORYS
+
+climatology.file <- list.files(path="/home/atlantis/storagebucket/GLORYS/climatology/",pattern="*.nc", full.names = TRUE)
+
+glorys.rast <- terra::rast(climatology.file) %>% 
+      terra::project("EPSG:4269")
 ```
 
 
