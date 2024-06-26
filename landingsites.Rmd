@@ -5,6 +5,10 @@ output: html_notebook
 
 
 ```{r load package, include=FALSE}
+
+# RUN FIRST
+#gcsfuse cedo_model_data storagebucket
+
 #rebuild and load the package
 devtools::load_all() # restarts and loads
 
@@ -28,8 +32,10 @@ import::from(dplyr, mutate, distinct, select, group_by, summarise, keep_when = f
 
 #to fix access issues
 #https://www.namehero.com/blog/solve-temporary-failure-in-name-resolution-error-in-linux/
+#sudo resolvectl flush-caches
+#sudo systemd-resolve --flush-caches
 
-
+system("sudo chmod -R a+rwx ~/", wait = TRUE)
 ```
 
 Get catch from official record. 
@@ -420,15 +426,29 @@ entry.interval <- 1:length(start.time.interval)
 #download data
 lapply(entry.interval, get_monthlyglorys, start.time.interval, end.time.interval, min_lon, max_lon, min_lat, max_lat, out_dir, data.set.id)
 
-#1991-2016 climatology
+#Get GLORYS data prior to 2018 for climatology
+#GLORYS monthly available time series is 04/12/1991 to 31/06/2021
+data.set.id <- "cmems_mod_glo_phy_my_0.083deg_P1M-m"
+var.id <- "thetao"
+#set time period
+start.time.interval <- seq(as.Date("1994-01-01"), length=288, by="1 month") 
+end.time.interval <- seq(as.Date("1994-02-01"), length=288, by="1 month") - 1
+#set length of time period
+entry.interval <- 1:length(start.time.interval)
+#download data
+lapply(entry.interval, get_monthlyglorys, start.time.interval, end.time.interval, min_lon, max_lon, min_lat, max_lat, out_dir, data.set.id)
+
+#1993-2016 climatology
 data.set.id <- "cmems_mod_glo_phy_my_0.083deg-climatology_P1M-m"
 out_dir = paste0("~/storagebucket/GLORYS/climatology")
 
 #download data
 get_climatologyglorys(min_lon, max_lon, min_lat, max_lat, out_dir, data.set.id)
 
+#To get forecast data from Global Ocean Physics Analysis and Forecast
+#https://data.marine.copernicus.eu/product/GLOBAL_ANALYSISFORECAST_PHY_001_024/description
 
-#Get biogeochemistry data
+#To get biogeochemistry data
 #https://catalogue.marine.copernicus.eu/documents/PUM/CMEMS-GLO-PUM-001-029.pdf
 #data.set.id <- "cmems_mod_glo_bgc_my_0.083deg_P1M-m"
 #var.id <- "chl"
@@ -566,13 +586,41 @@ NumberOfCluster <- parallel::detectCores()  #- 1
 
 
 ```
+
+
+```{r}
+#Get ESM model files for climatology from cedo archive
+#store in storage bucket /ESM_CMIP6
+
+system("")
+
+```
+
+
+
+
 ```{r}
 #Climatology GLORYS
 
+#Climatology file is 1993-2016
 climatology.file <- list.files(path="/home/atlantis/storagebucket/GLORYS/climatology/",pattern="*.nc", full.names = TRUE)
 
 glorys.rast <- terra::rast(climatology.file) %>% 
       terra::project("EPSG:4269")
+#contains the 1993-2016 monthly climatology mean fields: for each month of the year and depth layer, 31 depth layers x 12 months
+
+
+glorys.nc  <-  tidync::tidync(climatology.file) %>%
+  tidync::hyper_tibble() %>%
+  dplyr::filter(depth == min(depth))
+
+glorys.goc <- ggplot2::ggplot(data = glorys.nc, ggplot2::aes(x= longitude, y = latitude, color = thetao))+
+  ggplot2::geom_point()+
+#  ggplot2::annotation_map(mapdata::map('worldHires'),fill = 'grey70',alpha=0.3) +
+  ggplot2::labs(title="Jan 1996-2016 climatology",
+                color = "Sea temperature")  
+  
+
+glorys.goc
+
 ```
-
-
