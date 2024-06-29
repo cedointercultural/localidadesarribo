@@ -1,5 +1,5 @@
 ---
-title: "Goreference landing sites for fishery logs"
+title: "Goreference landing sites for fishery logs and obtain temperature data for each catch point"
 output: html_notebook
 ---
 
@@ -592,7 +592,19 @@ NumberOfCluster <- parallel::detectCores()  #- 1
 #Get ESM model files for climatology from cedo archive
 #store in storage bucket /ESM_CMIP6
 
-system("")
+#sh files stored in localidadesarribo/inputs
+system("sudo chmod u+x wget_script_2024-6-27_17-53-18.sh")
+system("sudo bash ./wget_script_2024-6-27_17-53-18.sh -s") # -s option allows certificate free download
+#see https://esgf.github.io/esgf-user-support/user_guide.html#data-search-and-download
+#Downloads files stored in Azure blob storage
+system("sudo chmod + esm_files.sh")
+system("sudo sh ./esm_files.sh")
+
+system("sudo chmod + esm_future.sh")
+system("sudo sh ./esm_future.sh")
+
+#to run CDO, there is an error in Ubuntu repositories, see https://code.mpimet.mpg.de/boards/1/topics/12307?r=13297#message-13297
+#removed and reinstalled CDO using Conda https://github.com/conda-forge/cdo-feedstock
 
 ```
 
