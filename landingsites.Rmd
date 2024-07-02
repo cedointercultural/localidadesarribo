@@ -680,15 +680,31 @@ lapply(rel.list, cal_clim, merged.hist.files, merged.future.files)
 ```
 
 Need to interpolate anomalies to full extent of GLORYS grid
-https://cran.r-project.org/web/packages/ipdw/vignettes/ipdw2.html
 
 ```{r}
 
-esm.coord.files <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM", pattern="*_coord.nc", full.names = TRUE)
+esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/delta_files", pattern="*.nc", full.names = TRUE)
+
+#pick one GLORYS file for grid extraction
+glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_2017-12-01.nc"
+glorys.grid <- "~/storagebucket/GLORYS/glorys3d.grd"
+# GLORYS grid file (only have to run once)
+ClimateOperators::cdo("griddes",glorys.nc,">",glorys.grid) # just need to run this once
+
+# vertical levels as a character string
+zlevs <- tidync::tidync(glorys.nc) %>% 
+  tidync::activate("D0") %>% 
+  tidync::hyper_tibble() %>% 
+  dplyr::pull('depth') %>% 
+  paste(collapse=",")
+
+#note this is used only for 3D variables
+   ClimateOperators::cdo("-intlevel",zlevs,"-remapdis", glorys.grid, infile, outfile)
 
 
-lat.lon.raster <- data.frame(xyFromCell(raster.nc.rotate.ext, 1:ncell(raster.nc.rotate.ext)))
-  vals.raster <- getValues(raster.nc.rotate.ext)
+#https://cran.r-project.org/web/packages/ipdw/vignettes/ipdw2.html
+#lat.lon.raster <- data.frame(xyFromCell(raster.nc.rotate.ext, 1:ncell(raster.nc.rotate.ext)))
+#vals.raster <- getValues(raster.nc.rotate.ext)
   
 ```
 
