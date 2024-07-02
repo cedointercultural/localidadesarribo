@@ -38,6 +38,7 @@ import::from(dplyr, mutate, distinct, select, group_by, summarise, keep_when = f
 system("sudo chmod -R a+rwx ~/", wait = TRUE)
 
 devtools::install_github("markpayneatwork/ClimateOperators")
+
 ```
 
 Get catch from official record. 
@@ -610,6 +611,7 @@ system("sudo sh ./esm_future.sh")
 
 ```
 
+<<<<<<< HEAD
 Regrid files to assign lat lon as dimensions instead of variables
 ```{r regrid files, include=FALSE}
 
@@ -709,10 +711,8 @@ zlevs <- tidync::tidync(glorys.nc) %>%
 ```
 
 
-Interpolated anomalies
 ```{r}
 #Climatology GLORYS
-
 #Climatology file is 1993-2016
 climatology.file <- list.files(path="/home/atlantis/storagebucket/GLORYS/climatology/",pattern="*.nc", full.names = TRUE)
 

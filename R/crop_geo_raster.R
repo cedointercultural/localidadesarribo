@@ -2,7 +2,6 @@
 
 crop_geo_raster <- function(this.file){
 
-  
   raster.nc <- terra::rast(this.file)
   #raster.nc <- terra::raster(this.file,  varname = this.var, stopIfNotEqualSpaced = FALSE)
   proj4string(raster.nc) = "+proj=longlat +datum=WGS84"
