@@ -6,7 +6,7 @@ output: html_notebook
 
 ```{r load package, include=FALSE}
 
-# RUN FIRST
+# FIRST MOUNT DRIVE
 #gcsfuse cedo_model_data storagebucket
 
 #rebuild and load the package
@@ -611,7 +611,7 @@ system("sudo sh ./esm_future.sh")
 
 ```
 
-<<<<<<< HEAD
+
 Regrid files to assign lat lon as dimensions instead of variables
 ```{r regrid files, include=FALSE}
 
@@ -628,6 +628,7 @@ esm.files.future <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM_future"
 lapply(esm.files.future, correct_grid, this.var="tos", weight.dir)
 
 ```
+
 Hyperslab nc files to extract study area
 ```{r spatial crop, include=FALSE}
 
@@ -649,7 +650,7 @@ Merge together files from multiple decades
 esm.slab.files <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM", pattern="*_slab.nc", full.names = TRUE)
 esm.slab.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM_future", pattern="*_slab.nc", full.names = TRUE)
 
-#historical files will be 1984-2024, uses two files from future projections
+#historical files will be 1990-2024, uses two files from future projections
 #realizations to loop through
 #can only use realization r1 and r2 because they are the only future realizations
 rel.list <- paste0("r",1:2,"i1p1f1")
@@ -658,7 +659,7 @@ dir.create(merged.dir)
 #future data are the years from future projections that will be added to historical to match catch data or removed from future data
 #data period is entire period covered
 
-lapply(rel.list, merge_files, esm.slab.files, esm.slab.future.files, merged.dir, data.type = "historical", data.period=seq(1990,2024, by=5), data.range = c("198501","202412"))
+lapply(rel.list, merge_files, esm.slab.files, esm.slab.future.files, merged.dir, data.type = "historical", data.period=seq(1990,2024, by=5), data.range = c("199001","202412"))
 
 #50 year projection dataset
 lapply(rel.list, merge_files, esm.slab.files, esm.slab.future.files, merged.dir, data.type = "future", data.period=seq(2025,2070, by=5), data.range = c("202501","207412"))
@@ -668,7 +669,7 @@ lapply(rel.list, merge_files, esm.slab.files, esm.slab.future.files, merged.dir,
 ```{r calculate ESM climatology, include=FALSE}
 #Calculate 30 or 50 year climatology
 
-merged.hist.files <- list.files(path = "~/storagebucket/ESM_CMIP6/merged_files", pattern="1985", full.names = TRUE)
+merged.hist.files <- list.files(path = "~/storagebucket/ESM_CMIP6/merged_files", pattern="1990", full.names = TRUE)
 merged.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/merged_files", pattern="2025", full.names = TRUE)
 
 rel.list <- paste0("r",1:2,"i1p1f1")
@@ -677,61 +678,119 @@ dir.create(clim.dir)
 delta.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/delta_files/"
 dir.create(delta.dir)
 
-lapply(rel.list, cal_clim, merged.hist.files, merged.future.files)
-
+delta.future.file<- lapply(rel.list, cal_clim, merged.hist.files, merged.future.files)
+ 
+delta.rast <- terra::rast(delta.future.file)
+  delta.plot <- terra::plot(delta.rast)
+  
 ```
 
 Need to interpolate anomalies to full extent of GLORYS grid
 
 ```{r}
 
-esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/delta_files", pattern="*.nc", full.names = TRUE)
+esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/delta_files", pattern="*delta.nc", full.names = TRUE)
+
+delta.rast <- terra::rast(this.delta.file)
 
 #pick one GLORYS file for grid extraction
-glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_2017-12-01.nc"
-glorys.grid <- "~/storagebucket/GLORYS/glorys3d.grd"
-# GLORYS grid file (only have to run once)
-ClimateOperators::cdo("griddes",glorys.nc,">",glorys.grid) # just need to run this once
+glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_1997-02-01.nc"
 
-# vertical levels as a character string
-zlevs <- tidync::tidync(glorys.nc) %>% 
-  tidync::activate("D0") %>% 
-  tidync::hyper_tibble() %>% 
-  dplyr::pull('depth') %>% 
-  paste(collapse=",")
+lapply(esm.delta.files, interpolate_delta, glorys.nc)
 
-#note this is used only for 3D variables
-   ClimateOperators::cdo("-intlevel",zlevs,"-remapdis", glorys.grid, infile, outfile)
+esm.interp.files <- list.files(path = "~/storagebucket/ESM_CMIP6/delta_files", pattern="*interp.nc", full.names = TRUE)
 
-
+#explore interpolated output
+inter.rast <- terra::rast(esm.interp.files[2])
+terra::plot(inter.rast)
 #https://cran.r-project.org/web/packages/ipdw/vignettes/ipdw2.html
 #lat.lon.raster <- data.frame(xyFromCell(raster.nc.rotate.ext, 1:ncell(raster.nc.rotate.ext)))
 #vals.raster <- getValues(raster.nc.rotate.ext)
   
 ```
+```{r merge clim glorys, include=FALSE}
 
+#list monthly files to merge and calculate climatology
+glorys.monthly.files <- list.files(path = "~/storagebucket/GLORYS/monthly", pattern="*.nc", full.names = TRUE)
 
-```{r}
-#Climatology GLORYS
-#Climatology file is 1993-2016
-climatology.file <- list.files(path="/home/atlantis/storagebucket/GLORYS/climatology/",pattern="*.nc", full.names = TRUE)
+#climatology will be 1994-2023
 
-glorys.rast <- terra::rast(climatology.file) %>% 
-      terra::project("EPSG:4269")
-#contains the 1993-2016 monthly climatology mean fields: for each month of the year and depth layer, 31 depth layers x 12 months
+merged.dir <- "/home/atlantis/storagebucket/GLORYS/merged_files/"
+dir.create(merged.dir)
+#future data are the years from future projections that will be added to historical to match catch data or removed from future data
+glorys.name <- "cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_193001-202412_merged.nc"
 
+clim.glorys.file <- merge_glorys(glorys.monthly.files, merged.dir, glorys.name)
 
-glorys.nc  <-  tidync::tidync(climatology.file) %>%
-  tidync::hyper_tibble() %>%
-  dplyr::filter(depth == min(depth))
-
-glorys.goc <- ggplot2::ggplot(data = glorys.nc, ggplot2::aes(x= longitude, y = latitude, color = thetao))+
-  ggplot2::geom_point()+
-#  ggplot2::annotation_map(mapdata::map('worldHires'),fill = 'grey70',alpha=0.3) +
-  ggplot2::labs(title="Jan 1996-2016 climatology",
-                color = "Sea temperature")  
-  
-
-glorys.goc
+clim.rast <- terra::rast(clim.glorys.file)
+terra::plot(clim.rast)
 
 ```
+
+Add the grid-converted ESM deltas to the GLORYS climatology
+```{r}
+
+glorys.clim.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/merged_files", pattern="*clim.nc", full.names = TRUE)
+esm.delta.files <- list.files(path = "/home/atlantis/storagebucket/ESM_CMIP6/delta_files", pattern = "*delta.nc", full.names = TRUE)
+
+final.esm.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/GLORYS_ESM_final/"
+rel.list <- paste0("r",1:2,"i1p1f1")
+
+delta.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/delta_files"
+
+dir.create(final.esm.dir)
+lapply(rel.list, delta_clim, final.esm.dir, esm.delta.file, glorys.clim.files)
+
+delta_clim <- function(this.rel, final.esm.dir, esm.delta.files, glorys.clim.files, delta.dir){
+  
+   esm.delta <- grep(this.rel, esm.delta.files, value=TRUE)
+   newflext <- gsub("delta.nc", "deltayr_", esm.delta)
+  
+    #separates singe file into multiple years
+  system(paste0("cdo splityear ", esm.delta, " ",newflext), wait=TRUE)
+  
+esm.delta.yr.files <- list.files(path = delta.dir, pattern = "*deltayr*.*", full.names = TRUE)
+
+#Reset reference time for files
+system(paste0("cdo setreftime,1850-01-01,00:00:00,1day ",glorys.clim.files,' ',final.esm.dir,"tmp1.nc"), wait = TRUE)
+   
+
+#CONTINUE EDITING HERE  
+for(i in 1:length(yrs)){
+    
+    yr=yrs[i]
+    
+     system(cmd2)
+    
+    this.year <- grep(i, esm.delta.yr.files, value=TRUE)
+    this.corr.year <- gsub("deltayr","deltayrtime", this.year)
+ 
+     # fix degenerate variable created when climatology was averaged, because it messes up adding
+    cmd3 <- paste0('ncks -O -x -v average_DT, this.year)
+    system(cmd3)
+    
+    # if 'type' specified is 'add' (the default) and if monthly timestep, use ymonadd
+    # if 'type' specified is 'add' (the default) and if timestep is yearly use add
+    # if 'type' specified is NOT 'add' and if monthly timestep, use ymonmul (multiplicative delta)
+    # if 'type' specified is 'add' (the default) and if timestep is yearly use mul
+    
+    #change file permissions for temp files
+    system(paste0('sudo chmod 775 ',here(),'/delta_method_final_outputs/tmp1.nc'))
+    system(paste0('sudo chmod 775 ',here(),'/delta_method_final_outputs/',newflext,yr,'.nc'))
+
+    if(timestep=='month'){
+      fxn <- ifelse(type=="add",'ymonadd','ymonmul')
+      cmd4 <- paste0('sudo cdo ',fxn,' ',here(),'/delta_method_final_outputs/',newflext,yr,'.nc ',here(),'/GLORYS_climatology/',glorysfl,' ',here(),'/GLORYS_ESM_final/',ofile,yr,'.nc')
+    }else{
+      fxn <- ifelse(type=="add",'add','mul')
+      cmd4 <- paste0('sudo cdo ',fxn,' ',here(),'/delta_method_final_outputs/tmp1.nc ',here(),'/delta_method_final_outputs/tmp2.nc ',here(),'/delta_method_final_outputs/',ofile,yr,'.nc')
+    }
+    system(cmd4)
+  }  
+
+}
+ 
+ 
+```
+
+

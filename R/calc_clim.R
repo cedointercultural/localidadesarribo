@@ -4,7 +4,7 @@
 #' @param merged.hist.files 
 #' @param merged.future.files 
 #'
-#' @return delta.plot plot of anomalies
+#' @return 
 #' @export
 #'
 #' @examples
@@ -23,8 +23,6 @@ cal_clim <- function(this.rel, merged.hist.files, merged.future.files){
   #calculate anomalies, deltas by substracting climatology from projections   
   ClimateOperators::cdo("ymonsub", future.file, "-ymonmean", hist.file, delta.future.file)
   ClimateOperators::cdo("sinfo",delta.future.file)
-  delta.rast <- terra::rast(delta.future.file)
-  delta.plot <- terra::plot(delta.rast)
   
-  return(delta.plot)
+  return(delta.future.file)
 }
