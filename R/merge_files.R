@@ -39,11 +39,15 @@ merge_files <- function(this.rel, esm.slab.files, esm.slab.future.files, merged.
   print(list.merge.files)
   
   merge.file <- paste0(merged.dir, "tos_Omon_MPI-ESM1-2-HR_",this.rel,"_", data.range[1],"-",data.range[2],"_merged.nc")
-  
-  ClimateOperators::cdo("-mergetime", list.merge.files, merge.file)
-  #this option can be used to create smaller files, not sure how R treats netcdf v2 files
-  #https://code.mpimet.mpg.de/boards/1/topics/908
-  # ClimateOperators::cdo("-f nc2 mergetime", list.realization.files, merge.file)
-  #read netcdf info
-  ClimateOperators::cdo("sinfo",merge.file)
+  if(!file.exists(merge.file)){
+
+    ClimateOperators::cdo("-mergetime", list.merge.files, merge.file)
+    #this option can be used to create smaller files, not sure how R treats netcdf v2 files
+    #https://code.mpimet.mpg.de/boards/1/topics/908
+    # ClimateOperators::cdo("-f nc2 mergetime", list.realization.files, merge.file)
+    #read netcdf info
+    ClimateOperators::cdo("sinfo",merge.file)
+    
+  }
+
 }

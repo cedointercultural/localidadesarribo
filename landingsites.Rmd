@@ -157,7 +157,7 @@ devtools::load_all() # restarts and loads
 ```
 
 
-#Create table georeferrenced locations from INEGI & Google and add distance to nearest fishery office
+Create table georeferrenced locations from INEGI & Google and add distance to nearest fishery office
 
 ```{r location table, echo=TRUE}
 
@@ -240,7 +240,9 @@ fishery.offices <- sf::st_read(here::here("outputs","fishery_offices.shp")) %>% 
 
 num.georef.locs <- 1:nrow(georef.locs.sp)
 
-georef.locs.dist <- parallel::mclapply(num.georef.locs, get_distance, fishery.offices) %>% 
+NumberOfCluster <- parallel::detectCores()  #- 1
+
+georef.locs.dist <- parallel::mclapply(num.georef.locs, get_distance, fishery.offices, mc.cores = NumberOfCluster) %>% 
   dplyr::bind_rows() 
 
 
@@ -591,7 +593,7 @@ NumberOfCluster <- parallel::detectCores()  #- 1
 ```
 
 
-```{r}
+```{r get CMIP6 ESM files}
 #Get ESM model files for climatology from cedo archive
 #store in storage bucket /ESM_CMIP6
 
@@ -617,29 +619,33 @@ Regrid files to assign lat lon as dimensions instead of variables
 
 #CDO manual https://users.rcc.uchicago.edu/~davidkelly999/cdo.pdf
 # https://github.com/markpayneatwork/ClimateOperators
-esm.files <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM", pattern="*2.nc", full.names = TRUE)
+esm.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/historical", pattern="*2.nc", full.names = TRUE)
 
-weight.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/weight_files/"
+#NumberOfCluster <- parallel::detectCores()  - 1
 
-lapply(esm.files,correct_grid, this.var="tos", weight.dir)
+lapply(esm.files,correct_grid, this.var="tos")
 
-esm.files.future <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM_future", pattern="*.nc", full.names = TRUE)
+#parallel::mclapply(esm.files,correct_grid, this.var="tos", mc.cores = NumberOfCluster)
 
-lapply(esm.files.future, correct_grid, this.var="tos", weight.dir)
+esm.files.future <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/future", pattern="*2.nc", full.names = TRUE)
+
+#parallel::mclapply(esm.files.future, correct_grid, this.var="tos", mc.cores = NumberOfCluster)
+
+lapply(esm.files.future, correct_grid, this.var="tos")
 
 ```
 
 Hyperslab nc files to extract study area
 ```{r spatial crop, include=FALSE}
 
-esm.coord.files <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM", pattern="*_coord.nc", full.names = TRUE)
+esm.coord.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/historical", pattern="*_coord.nc", recursive=TRUE, full.names = TRUE)
 
 #-118.0008537881,19.9871469981,-104.9710686319,32.1040488772
-lapply(esm.coord.files, hyerslab_spatial_area, min.lon=-118.0008537881, max.lon=-104.9710686319, min.lat= 19.9871469981, max.lat= 32.1040488772)
+lapply(esm.coord.files, hyperslab_spatial_area, min.lon=-118.0008537881, max.lon=-104.9710686319, min.lat= 19.9871469981, max.lat= 32.1040488772)
 
-esm.coord.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM_future", pattern="*_coord.nc", full.names = TRUE)
+esm.coord.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/future", pattern="*_coord.nc", full.names = TRUE)
 
-lapply(esm.coord.future.files, hyerslab_spatial_area, min.lon=-118.0008537881, max.lon=-104.9710686319, min.lat= 19.9871469981, max.lat= 32.1040488772)
+lapply(esm.coord.future.files, hyperslab_spatial_area, min.lon=-118.0008537881, max.lon=-104.9710686319, min.lat= 19.9871469981, max.lat= 32.1040488772)
 
 
 ```
@@ -647,14 +653,14 @@ lapply(esm.coord.future.files, hyerslab_spatial_area, min.lon=-118.0008537881, m
 Merge together files from multiple decades
 ```{r merge files, include=FALSE}
 
-esm.slab.files <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM", pattern="*_slab.nc", full.names = TRUE)
-esm.slab.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/MPI_ESM_future", pattern="*_slab.nc", full.names = TRUE)
+esm.slab.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/historical", pattern="*_slab.nc", full.names = TRUE)
+esm.slab.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/future", pattern="*_slab.nc", full.names = TRUE)
 
 #historical files will be 1990-2024, uses two files from future projections
 #realizations to loop through
 #can only use realization r1 and r2 because they are the only future realizations
 rel.list <- paste0("r",1:2,"i1p1f1")
-merged.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/merged_files/"
+merged.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/thetao/merged_files/"
 dir.create(merged.dir)
 #future data are the years from future projections that will be added to historical to match catch data or removed from future data
 #data period is entire period covered
@@ -666,10 +672,33 @@ lapply(rel.list, merge_files, esm.slab.files, esm.slab.future.files, merged.dir,
 
 ```
 
+Hyperslab of depth layers
+```{r}
+#select 0-500 to match selcted depths in GLORYS files, data goes to 5000m but we don't need that
+esm.merge.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="*_merged.nc", full.names = TRUE)
+
+#nco uses indexing of depth layers
+ini.depth = 1
+end.depth = 18
+
+#lev = 6, 17, 27, 37, 47, 57, 68.5, 82.5, 100, 122.5, 150, 182.5, 220, 262.5, 
+#    310, 362.5, 420, 485, 560, 645, 740, 845, 960, 1085, 1220, 1365, 1525, 
+#    1700, 1885, 2080, 2290, 2525, 2785, 3070, 3395, 3770, 4195, 4670, 5170, 
+#    5720 ;
+
+lapply(esm.merge.files,hyperslab_depth,ini.depth, end.depth)
+
+esm.depth.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="*_depth.nc", full.names = TRUE)
+
+system(paste0("cdo sinfon ",esm.depth.files[1]))
+system(paste0("cdo sinfon ",esm.depth.files[3]))
+```
+
+Calculate ESM climatology
 ```{r calculate ESM climatology, include=FALSE}
 #Calculate 30 or 50 year climatology
 
-merged.hist.files <- list.files(path = "~/storagebucket/ESM_CMIP6/merged_files", pattern="1990", full.names = TRUE)
+merged.hist.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="1990", full.names = TRUE)
 merged.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/merged_files", pattern="2025", full.names = TRUE)
 
 rel.list <- paste0("r",1:2,"i1p1f1")
