@@ -13,7 +13,7 @@ output: html_notebook
 devtools::load_all() # restarts and loads
 
 # List of packages for session
-.packages = c("import")
+.packages = c("import","dplyr") #need to be loaded
 
 # Install CRAN packages (if not already installed)
 .inst <- .packages %in% installed.packages()
@@ -499,10 +499,27 @@ glorys.goc <- ggplot2::ggplot(data = glorys.nc, ggplot2::aes(x= longitude, y = l
 glorys.goc
 ```
 
+Aggregate depth bins to match projections of CMIP6 data
+
+```{r}
+glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly", pattern="*01.nc$", full.names = TRUE)
+
+#need to aggregate initial depth bins because projected future data starts at 6 m and it is not possible to interpolate to smaller bins
+ClimateOperators::cdo("zaxisdes",glorys.files[1])  #shows depth, z axis
+ClimateOperators::cdo("sinfon",glorys.files[1])  #shows depth, z axis
+    agg.lev <- 7.92956 #will select all depths below this one for aggregation
+    max.lev <- 34.43415 #max level for selecting
+
+lapply(glorys.files,agg_depth_bin, agg.lev, max.lev)
+
+```
+
+
 Get temperature data for each point
 
 ```{r Get temp data per point, echo=FALSE}
 #Get temperature for each point from closest raster cell 
+#uses disaggregated temperature files
 
 this.depth <- 10 #Most species are not caught deeper
 # gc.ocean.grid <- sf::st_read(dsn="outputs/goc_grid.shp") %>% 
@@ -698,36 +715,42 @@ Calculate ESM climatology
 ```{r calculate ESM climatology, include=FALSE}
 #Calculate 30 or 50 year climatology
 
-merged.hist.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="1990", full.names = TRUE)
-merged.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/merged_files", pattern="2025", full.names = TRUE)
+depth.hist.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="1990.+depth", full.names = TRUE)
+depth.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="2025.+depth", full.names = TRUE)
 
 rel.list <- paste0("r",1:2,"i1p1f1")
-clim.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/clim_files/"
+clim.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/thetao/clim_files/"
 dir.create(clim.dir)
-delta.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/delta_files/"
+delta.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files/"
 dir.create(delta.dir)
 
-delta.future.file<- lapply(rel.list, cal_clim, merged.hist.files, merged.future.files)
+delta.future.file<- lapply(rel.list, cal_clim, depth.hist.files, depth.future.files)
  
-delta.rast <- terra::rast(delta.future.file)
-  delta.plot <- terra::plot(delta.rast)
+delta.rast <- terra::rast(delta.future.file[[1]])
+delta.plot <- terra::plot(delta.rast)
+
+depth.future <- terra::rast(depth.future.files[[1]])
+delta.plot <- terra::plot(delta.rast)
   
 ```
 
-Need to interpolate anomalies to full extent of GLORYS grid
+Interpolate anomalies to full extent of GLORYS grid
 
 ```{r}
 
-esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/delta_files", pattern="*delta.nc", full.names = TRUE)
+esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*delta.nc", full.names = TRUE)
 
-delta.rast <- terra::rast(this.delta.file)
-
+delta.rast <- terra::rast(esm.delta.files[1])
+terra::plot(delta.rast)
 #pick one GLORYS file for grid extraction
 glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_1997-02-01.nc"
+glorys.rast <- terra::rast(glorys.nc)
+terra::plot(glorys.rast)
+
 
 lapply(esm.delta.files, interpolate_delta, glorys.nc)
 
-esm.interp.files <- list.files(path = "~/storagebucket/ESM_CMIP6/delta_files", pattern="*interp.nc", full.names = TRUE)
+esm.interp.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*interp.nc", full.names = TRUE)
 
 #explore interpolated output
 inter.rast <- terra::rast(esm.interp.files[2])
@@ -737,6 +760,7 @@ terra::plot(inter.rast)
 #vals.raster <- getValues(raster.nc.rotate.ext)
   
 ```
+
 ```{r merge clim glorys, include=FALSE}
 
 #list monthly files to merge and calculate climatology
@@ -756,69 +780,18 @@ terra::plot(clim.rast)
 
 ```
 
-Add the grid-converted ESM deltas to the GLORYS climatology
+Add the grid-interpolated ESM deltas to the GLORYS climatology
 ```{r}
 
 glorys.clim.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/merged_files", pattern="*clim.nc", full.names = TRUE)
-esm.delta.files <- list.files(path = "/home/atlantis/storagebucket/ESM_CMIP6/delta_files", pattern = "*delta.nc", full.names = TRUE)
+esm.inter.files <- list.files(path = "/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files", pattern = "*interp.nc", full.names = TRUE)
 
-final.esm.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/GLORYS_ESM_final/"
 rel.list <- paste0("r",1:2,"i1p1f1")
 
-delta.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/delta_files"
+delta.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files"
 
-dir.create(final.esm.dir)
-lapply(rel.list, delta_clim, final.esm.dir, esm.delta.file, glorys.clim.files)
+lapply(rel.list, interp_clim, esm.inter.files, glorys.clim.files, delta.dir, type ="add", timestep="month")
 
-delta_clim <- function(this.rel, final.esm.dir, esm.delta.files, glorys.clim.files, delta.dir){
-  
-   esm.delta <- grep(this.rel, esm.delta.files, value=TRUE)
-   newflext <- gsub("delta.nc", "deltayr_", esm.delta)
-  
-    #separates singe file into multiple years
-  system(paste0("cdo splityear ", esm.delta, " ",newflext), wait=TRUE)
-  
-esm.delta.yr.files <- list.files(path = delta.dir, pattern = "*deltayr*.*", full.names = TRUE)
-
-#Reset reference time for files
-system(paste0("cdo setreftime,1850-01-01,00:00:00,1day ",glorys.clim.files,' ',final.esm.dir,"tmp1.nc"), wait = TRUE)
-   
-
-#CONTINUE EDITING HERE  
-for(i in 1:length(yrs)){
-    
-    yr=yrs[i]
-    
-     system(cmd2)
-    
-    this.year <- grep(i, esm.delta.yr.files, value=TRUE)
-    this.corr.year <- gsub("deltayr","deltayrtime", this.year)
- 
-     # fix degenerate variable created when climatology was averaged, because it messes up adding
-    cmd3 <- paste0('ncks -O -x -v average_DT, this.year)
-    system(cmd3)
-    
-    # if 'type' specified is 'add' (the default) and if monthly timestep, use ymonadd
-    # if 'type' specified is 'add' (the default) and if timestep is yearly use add
-    # if 'type' specified is NOT 'add' and if monthly timestep, use ymonmul (multiplicative delta)
-    # if 'type' specified is 'add' (the default) and if timestep is yearly use mul
-    
-    #change file permissions for temp files
-    system(paste0('sudo chmod 775 ',here(),'/delta_method_final_outputs/tmp1.nc'))
-    system(paste0('sudo chmod 775 ',here(),'/delta_method_final_outputs/',newflext,yr,'.nc'))
-
-    if(timestep=='month'){
-      fxn <- ifelse(type=="add",'ymonadd','ymonmul')
-      cmd4 <- paste0('sudo cdo ',fxn,' ',here(),'/delta_method_final_outputs/',newflext,yr,'.nc ',here(),'/GLORYS_climatology/',glorysfl,' ',here(),'/GLORYS_ESM_final/',ofile,yr,'.nc')
-    }else{
-      fxn <- ifelse(type=="add",'add','mul')
-      cmd4 <- paste0('sudo cdo ',fxn,' ',here(),'/delta_method_final_outputs/tmp1.nc ',here(),'/delta_method_final_outputs/tmp2.nc ',here(),'/delta_method_final_outputs/',ofile,yr,'.nc')
-    }
-    system(cmd4)
-  }  
-
-}
- 
  
 ```
 

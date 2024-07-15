@@ -16,28 +16,53 @@ interpolate_delta <- function(this.delta.file, glorys.nc){
   ClimateOperators::cdo("griddes",glorys.nc,">","glorys3d.grd") 
   ClimateOperators::cdo("zaxisdes",glorys.nc)  #shows depth, z axis
   
-  is_3d <- ifelse(grepl('zos',this.delta.file),F,T)
+  #is_3d <- ifelse(grepl('zos',this.delta.file),F,T)
   
   # vertical levels as a character string
-  zlevs <- tidync::tidync(glorys.nc) %>% 
+  zlevs.glorys <- tidync::tidync(glorys.nc) %>% 
     tidync::activate("D0") %>% 
     tidync::hyper_tibble() %>% 
     dplyr::pull('depth') %>% 
     paste(collapse=",")
+ 
+  zlevs.target <- tidync::tidync(this.delta.file) %>% 
+    tidync::activate("D4") %>% 
+    tidync::hyper_tibble() %>% 
+    dplyr::pull('lev') %>% 
+    paste(collapse=",")
   
+   
   this.inter.file <- gsub("_delta","_interp", this.delta.file)
   print(this.inter.file)
   
   #note this is used only for 3D variables
-  system(paste0("cdo -remapdis,","glorys3d.grd"," ",this.delta.file," ",this.inter.file), wait=TRUE)
+
+  #system(paste0("cdo -intlevel3d,",zlevs.glorys," -remapdis,","glorys3d.grd"," ",this.delta.file," ",this.inter.file), wait=TRUE)
   
-  #  system(paste0("cdo intlevel,",zlevs, " -selname,tos ",this.delta.file," ",this.inter.file), wait=TRUE)
-  # cdo intlevel,10,20,30,40,50,60,70,80,90,100,110,120,130,140,150,160,170,180,190,200 -selname,thetao thetao_Omon_inmcm4_historical_r1i1p1_197001-197412.nc interim.nc
-  
-  # system(paste0("cdo -intlevel3d,",zlevs," -remapdis,","glorys3d.grd"," ",this.delta.file," ",this.inter.file), wait=TRUE)
+  system(paste0("cdo -intlevelx,",zlevs.glorys," -remapdis,","glorys3d.grd"," ",this.delta.file," ",this.inter.file), wait=TRUE)
   #ClimateOperators::cdo("-remapdis,", "glorys3d.grd", this.delta.file, this.inter.file)
   #ClimateOperators::cdo("-intlevel,",zlevs,"-remapdis", "glorys3d.grd", this.delta.file, this.inter.file)
+
+ delta.rast <- terra::rast(this.delta.file)
+ terra::plot(delta.rast)
   
-  system(paste0("cdo -O remapdis,",glorys.nc, " ",this.delta.file," ",this.inter.file), wait =TRUE)
-}
+inter.rast <- terra::rast(this.inter.file)
+terra::plot(inter.rast)  
+system(paste0("ncdump ",this.inter.file," > test.cdf")) 
+
+this.inter.file <- gsub("_delta","_interp2", this.delta.file)
+
+system(paste0("ncks --rgr infer --rgr scrip=grd_scrip.nc \ ", glorys.nc, " foo.nc"))
+system(paste0("ncremap -g grd_scrip.nc ",this.delta.file," ", this.inter.file),wait = TRUE)
+system(paste0("ncdump ",this.inter.file," > test2.cdf")) 
+system(paste0("ncdump grd_scrip.nc > grid.cdf")) 
+
+
+inter.rast <- terra::rast(this.inter.file)
+terra::plot(inter.rast)  
+
+#ncks --rgr infer --rgr scrip=${DATA}/sld/rgr/grd_scrip.nc \
+#${DATA}/sld/raw/AIRS.2014.10.01.202.L2.TSurfStd.Regrid010.1DLatLon.nc ~/foo.nc
+
+  }
 
