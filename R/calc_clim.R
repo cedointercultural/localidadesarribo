@@ -16,14 +16,16 @@ cal_clim <- function(this.rel, depth.hist.files, depth.future.files){
   print(hist.file)
   print(future.file)
   clim.hist.file <- gsub("depth","clim", hist.file)
-  delta.future.file <- gsub("depth","delta", future.file)
-  delta.future.file <- gsub("merged_files","delta_files", delta.future.file)
+  delta.future.file <- gsub("depth","delta", future.file) #rename filename
+  delta.future.file <- gsub("merged_files","delta_files", delta.future.file) #rename directory
+  
   #calculate climatology, monthly means across time period 
   print("calculate climatology")
   ClimateOperators::cdo("ymonmean", hist.file, clim.hist.file)
   ClimateOperators::cdo("sinfo",clim.hist.file)
   clim.rast <- terra::rast(clim.hist.file)
   terra::plot(clim.rast)
+  
   print("calculate anomalies")
   #calculate anomalies, deltas by substracting climatology from projections   
   ClimateOperators::cdo("ymonsub", future.file, "-ymonmean", hist.file, delta.future.file)

@@ -12,13 +12,16 @@ hyperslab_depth <- function(this.merge.file,ini.depth, end.depth){
   
   print(this.merge.file)
   system(paste0("cdo sinfon ",this.merge.file), wait=TRUE)
-  system(paste0("ncdump -h ",this.merge.file), wait=TRUE)
+  #system(paste0("ncdump -h ",this.merge.file), wait=TRUE)
   depth.file <- gsub("_merged.nc","_depth.nc", this.merge.file)
   
   print(depth.file)
   if(!file.exists(depth.file)){
     print("creating hyperslab")
     system(paste0("ncks -F -d"," lev,",ini.depth,",",end.depth,",1 ", this.merge.file," ", depth.file), wait=TRUE)
+    
+    system(paste0("cdo sinfon ",depth.file))
+    
     #-F so it starts indexing at 1
     #https://stackoverflow.com/questions/54367298/hyperslab-of-a-4d-netcdf-variable-using-ncks
     #system(paste0("ncdump -h ",depth.file), wait=TRUE)

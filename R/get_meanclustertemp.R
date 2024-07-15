@@ -15,6 +15,8 @@ get_meanclustertemp <- function(this.time.interval, glorys.files, cluster.locs, 
   
   #open each GLORYS file once and loop through all the clusters
   
+  dir.create(out.dir)
+  
   this.start.time.interval <- start.time.interval[this.time.interval]
   
   this.year.no <- this.start.time.interval %>% 
@@ -39,12 +41,16 @@ get_meanclustertemp <- function(this.time.interval, glorys.files, cluster.locs, 
     glorys.rast <- terra::rast(this.glorys.file) %>% 
       terra::project("EPSG:4269")
     
+    depth.lyrs.10 <- c("thetao_sfc=6","thetao_sfc=7.92956018447876","thetao_sfc=9.572997093200684")
+    
     #extract depth layers < 10m, first eight layers
     #depth.layers <- c("thetao_depth=0.49402499","thetao_depth=1.541375","thetao_depth=2.645669","thetao_depth=3.819495","thetao_depth=5.0782242",  "thetao_depth=6.4406142", "thetao_depth=7.9295602", "thetao_depth=9.5729971")
     
-    depth.glorys <- terra::subset(glorys.rast, terra::names(glorys.rast)[1:8])
-    mean.glorys <- terra::mean(depth.glorys, na.rm=TRUE)
+    depth.glorys.10 <- terra::mean(terra::subset(glorys.rast, terra::names(glorys.rast)[1:length(depth.lyrs.10)]))
+    depth.glorys <- glorys.rast
+    depth.glorys.30 <- terra::mean(depth.glorys, na.rm=TRUE)
     
+        
     this.date.cluster.locs <- cluster.locs %>%
       dplyr::filter(year==as.numeric(this.year.no), month_no==as.numeric(this.month.no)) 
     
@@ -62,7 +68,7 @@ get_meanclustertemp <- function(this.time.interval, glorys.files, cluster.locs, 
         if(nrow(this.cluster) > 0){
         
           
-          convex.hull <- st_convex_hull(st_union(this.cluster)) 
+          convex.hull <- sf::st_convex_hull(sf::st_union(this.cluster)) 
           
           spvector.convex.hull <- sf::as_Spatial(convex.hull) 
           spat.convex.hull <- terra::vect(spvector.convex.hull)
@@ -71,14 +77,21 @@ get_meanclustertemp <- function(this.time.interval, glorys.files, cluster.locs, 
             dplyr::mutate(Cluster_Label=eachcluster) %>% 
             dplyr::select(-ID)
           
-          convex.temp <- terra::extract(mean.glorys, spat.convex.hull, fun=mean, na.rm=TRUE) %>% 
+          #r_avg <- mean(STACK)
+          convex.temp.30 <- terra::extract(depth.glorys.30, spat.convex.hull, fun=mean, na.rm=TRUE) %>% 
+            dplyr::mutate(Cluster_Label=eachcluster) %>% 
             dplyr::select(-ID)
+          convex.temp.10 <- terra::extract(depth.glorys.10, spat.convex.hull, fun=mean, na.rm=TRUE) %>% 
+            dplyr::mutate(Cluster_Label=eachcluster) %>% 
+            dplyr::select(-ID)
+          
           
           this.cluster.frame <- this.cluster %>% 
             dplyr::as_tibble() %>% 
             dplyr::mutate(cluster = eachcluster,
                           date = this.date,
-                          mean_temp = convex.temp$mean) %>% 
+                          mean_temp_30m = convex.temp.30$mean,
+                          mean_temp_10m = convex.temp.10$mean) %>% 
             dplyr::left_join(convex.depth.temp, by = "Cluster_Label")
           
           cluster.list[[thiscluster]] <- this.cluster.frame

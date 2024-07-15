@@ -20,12 +20,12 @@ interpolate_delta <- function(this.delta.file, glorys.nc){
   
   # vertical levels as a character string
   zlevs.glorys <- tidync::tidync(glorys.nc) %>% 
-    tidync::activate("D0") %>% 
+    tidync::activate("D3") %>% 
     tidync::hyper_tibble() %>% 
-    dplyr::pull('depth') %>% 
+    dplyr::pull('sfc') %>% 
     paste(collapse=",")
  
-  zlevs.target <- tidync::tidync(this.delta.file) %>% 
+  zlevs.esm <- tidync::tidync(this.delta.file) %>% 
     tidync::activate("D4") %>% 
     tidync::hyper_tibble() %>% 
     dplyr::pull('lev') %>% 
@@ -39,8 +39,10 @@ interpolate_delta <- function(this.delta.file, glorys.nc){
 
   #system(paste0("cdo -intlevel3d,",zlevs.glorys," -remapdis,","glorys3d.grd"," ",this.delta.file," ",this.inter.file), wait=TRUE)
   
-  system(paste0("cdo -intlevelx,",zlevs.glorys," -remapdis,","glorys3d.grd"," ",this.delta.file," ",this.inter.file), wait=TRUE)
-  #ClimateOperators::cdo("-remapdis,", "glorys3d.grd", this.delta.file, this.inter.file)
+  system(paste0("cdo -intlevel,",zlevs.glorys," -remapdis,","glorys3d.grd"," ",this.delta.file," ",this.inter.file), wait=TRUE)
+  ClimateOperators::cdo("sinfon",this.delta.file)
+  ClimateOperators::cdo("sinfon",this.inter.file)
+  system(paste0("cdo -remapdis,", "glorys3d.grd ", this.delta.file," ", this.inter.file), wait=TRUE)
   #ClimateOperators::cdo("-intlevel,",zlevs,"-remapdis", "glorys3d.grd", this.delta.file, this.inter.file)
 
  delta.rast <- terra::rast(this.delta.file)
@@ -48,21 +50,19 @@ interpolate_delta <- function(this.delta.file, glorys.nc){
   
 inter.rast <- terra::rast(this.inter.file)
 terra::plot(inter.rast)  
-system(paste0("ncdump ",this.inter.file," > test.cdf")) 
+#system(paste0("ncdump ",this.inter.file," > test.cdf")) 
 
 this.inter.file <- gsub("_delta","_interp2", this.delta.file)
 
-system(paste0("ncks --rgr infer --rgr scrip=grd_scrip.nc \ ", glorys.nc, " foo.nc"))
-system(paste0("ncremap -g grd_scrip.nc ",this.delta.file," ", this.inter.file),wait = TRUE)
-system(paste0("ncdump ",this.inter.file," > test2.cdf")) 
-system(paste0("ncdump grd_scrip.nc > grid.cdf")) 
-
+#START HERE
+#use cdo to only interpolate vertically
+system(paste0("cdo -intlevel,",zlevs.glorys," ",this.delta.file," ",this.inter.file), wait=TRUE)
+ClimateOperators::cdo("sinfon",this.inter.file)
 
 inter.rast <- terra::rast(this.inter.file)
 terra::plot(inter.rast)  
 
-#ncks --rgr infer --rgr scrip=${DATA}/sld/rgr/grd_scrip.nc \
-#${DATA}/sld/raw/AIRS.2014.10.01.202.L2.TSurfStd.Regrid010.1DLatLon.nc ~/foo.nc
+#use nco to interpolate 
 
   }
 

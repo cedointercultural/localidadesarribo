@@ -553,7 +553,7 @@ start.time.interval <- paste(years.data,c("01","02","03","04","05","06","07","08
 
 time.interval <- 1:length(start.time.interval)
 
-glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly", full.names = TRUE)
+glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly_original", full.names = TRUE)
 
 NumberOfCluster <- parallel::detectCores()  #- 1
 
@@ -600,7 +600,7 @@ start.time.interval <- paste(years.data,c("01","02","03","04","05","06","07","08
 
 time.interval <- 1:length(start.time.interval)
 
-glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly", full.names = TRUE)
+glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly", pattern="._setlev.nc",full.names = TRUE)
 
 NumberOfCluster <- parallel::detectCores()  #- 1
 
@@ -609,7 +609,7 @@ NumberOfCluster <- parallel::detectCores()  #- 1
 
 ```
 
-
+Get CMIP6 files from repository and long-term storage
 ```{r get CMIP6 ESM files}
 #Get ESM model files for climatology from cedo archive
 #store in storage bucket /ESM_CMIP6
@@ -696,7 +696,7 @@ esm.merge.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_fi
 
 #nco uses indexing of depth layers
 ini.depth = 1
-end.depth = 18
+end.depth = 3
 
 #lev = 6, 17, 27, 37, 47, 57, 68.5, 82.5, 100, 122.5, 150, 182.5, 220, 262.5, 
 #    310, 362.5, 420, 485, 560, 645, 740, 845, 960, 1085, 1220, 1365, 1525, 
@@ -707,7 +707,6 @@ lapply(esm.merge.files,hyperslab_depth,ini.depth, end.depth)
 
 esm.depth.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="*_depth.nc", full.names = TRUE)
 
-system(paste0("cdo sinfon ",esm.depth.files[1]))
 system(paste0("cdo sinfon ",esm.depth.files[3]))
 ```
 
@@ -739,14 +738,14 @@ Interpolate anomalies to full extent of GLORYS grid
 ```{r}
 
 esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*delta.nc", full.names = TRUE)
+this.delta.file <- esm.delta.files[1]
 
-delta.rast <- terra::rast(esm.delta.files[1])
+delta.rast <- terra::rast(this.delta.file)
 terra::plot(delta.rast)
 #pick one GLORYS file for grid extraction
-glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_1997-02-01.nc"
+glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_1997-02-01_setlev.nc"
 glorys.rast <- terra::rast(glorys.nc)
 terra::plot(glorys.rast)
-
 
 lapply(esm.delta.files, interpolate_delta, glorys.nc)
 
