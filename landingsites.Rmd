@@ -7,6 +7,9 @@ output: html_notebook
 ```{r load package, include=FALSE}
 
 # FIRST MOUNT DRIVE
+#for error transport endpoint is not connected bucket 
+# https://stackoverflow.com/questions/14010115/amazon-s3-with-s3fs-and-fuse-transport-endpoint-is-not-connected
+#if auth is needed gcloud auth application-default login --no-browser and open link on local machine
 #gcsfuse cedo_model_data storagebucket
 
 #rebuild and load the package
@@ -468,6 +471,9 @@ catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_ca
 
 #select example GLORYS data
 glorys.file <- paste0("/home/atlantis/storagebucket/GLORYS/monthly/","cmems_mod_glo_phy_myint_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_2023-08-01.nc")
+this.terra.rast<- get_nc_description(glorys.file)
+terra::plot(this.terra.rast)
+
 #esm.file  <- here("delta_method_final_outputs","GFDL-CM4_delta_thetao_2050.nc")
 #glorys.esm.file  <- here("GLORYS_ESM_final","GFDL-CM4_glorys_thetao_2050.nc")
 
@@ -553,7 +559,7 @@ start.time.interval <- paste(years.data,c("01","02","03","04","05","06","07","08
 
 time.interval <- 1:length(start.time.interval)
 
-glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly_original", full.names = TRUE)
+glorys.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/monthly_original", pattern= "*.nc",full.names = TRUE)
 
 NumberOfCluster <- parallel::detectCores()  #- 1
 
@@ -637,6 +643,9 @@ Regrid files to assign lat lon as dimensions instead of variables
 #CDO manual https://users.rcc.uchicago.edu/~davidkelly999/cdo.pdf
 # https://github.com/markpayneatwork/ClimateOperators
 esm.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/historical", pattern="*2.nc", full.names = TRUE)
+this.file <- esm.files[2]
+this.terra.rast<- get_nc_description(this.file)
+terra::plot(this.terra.rast)
 
 #NumberOfCluster <- parallel::detectCores()  - 1
 
@@ -656,6 +665,9 @@ Hyperslab nc files to extract study area
 ```{r spatial crop, include=FALSE}
 
 esm.coord.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/historical", pattern="*_coord.nc", recursive=TRUE, full.names = TRUE)
+this.terra.rast<- get_nc_description(esm.coord.files[2])
+terra::plot(this.terra.rast)
+
 
 #-118.0008537881,19.9871469981,-104.9710686319,32.1040488772
 lapply(esm.coord.files, hyperslab_spatial_area, min.lon=-118.0008537881, max.lon=-104.9710686319, min.lat= 19.9871469981, max.lat= 32.1040488772)
@@ -672,6 +684,12 @@ Merge together files from multiple decades
 
 esm.slab.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/historical", pattern="*_slab.nc", full.names = TRUE)
 esm.slab.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/future", pattern="*_slab.nc", full.names = TRUE)
+
+this.terra.rast<- get_nc_description(esm.slab.files[2])
+terra::plot(this.terra.rast)
+
+this.terra.rast.future<- get_nc_description(esm.slab.future.files[2])
+terra::plot(this.terra.rast.future)
 
 #historical files will be 1990-2024, uses two files from future projections
 #realizations to loop through
@@ -691,12 +709,15 @@ lapply(rel.list, merge_files, esm.slab.files, esm.slab.future.files, merged.dir,
 
 Hyperslab of depth layers
 ```{r}
-#select 0-500 to match selcted depths in GLORYS files, data goes to 5000m but we don't need that
+#select 0-30 to match selcted depths in GLORYS files, data goes to 5000m but we don't need that
 esm.merge.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="*_merged.nc", full.names = TRUE)
+this.terra.rast<- get_nc_description(esm.merge.files[2])
+terra::plot(this.terra.rast)
+
 
 #nco uses indexing of depth layers
 ini.depth = 1
-end.depth = 3
+end.depth = 4
 
 #lev = 6, 17, 27, 37, 47, 57, 68.5, 82.5, 100, 122.5, 150, 182.5, 220, 262.5, 
 #    310, 362.5, 420, 485, 560, 645, 740, 845, 960, 1085, 1220, 1365, 1525, 
@@ -716,6 +737,12 @@ Calculate ESM climatology
 
 depth.hist.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="1990.+depth", full.names = TRUE)
 depth.future.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/merged_files", pattern="2025.+depth", full.names = TRUE)
+this.terra.rast<- get_nc_description(depth.hist.files[2])
+terra::plot(this.terra.rast)
+
+this.terra.rast.future <- get_nc_description(depth.future.files[2])
+terra::plot(this.terra.rast.future)
+
 
 rel.list <- paste0("r",1:2,"i1p1f1")
 clim.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/thetao/clim_files/"
@@ -725,11 +752,12 @@ dir.create(delta.dir)
 
 delta.future.file<- lapply(rel.list, cal_clim, depth.hist.files, depth.future.files)
  
-delta.rast <- terra::rast(delta.future.file[[1]])
-delta.plot <- terra::plot(delta.rast)
+delta.rast.1 <- terra::rast(delta.future.file[[1]])
+terra::plot(delta.rast.1)
 
-depth.future <- terra::rast(depth.future.files[[1]])
-delta.plot <- terra::plot(delta.rast)
+delta.rast.2 <- terra::rast(delta.future.file[[2]])
+terra::plot(delta.rast.2)
+
   
 ```
 
@@ -738,32 +766,32 @@ Interpolate anomalies to full extent of GLORYS grid
 ```{r}
 
 esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*delta.nc", full.names = TRUE)
-this.delta.file <- esm.delta.files[1]
+this.delta.file <- esm.delta.files[2]
+this.terra.rast<- get_nc_description(this.delta.file)
+terra::plot(this.terra.rast)
+delta.path <- "~/storagebucket/ESM_CMIP6/thetao/delta_files/"
 
-delta.rast <- terra::rast(this.delta.file)
-terra::plot(delta.rast)
 #pick one GLORYS file for grid extraction
 glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_1997-02-01_setlev.nc"
-glorys.rast <- terra::rast(glorys.nc)
-terra::plot(glorys.rast)
+system(paste0("cdo infon ",glorys.nc),wait = TRUE)
+terra::plot(this.terra.rast)
 
-lapply(esm.delta.files, interpolate_delta, glorys.nc)
+lapply(esm.delta.files, interpolate_delta, glorys.nc, delta.path)
 
 esm.interp.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*interp.nc", full.names = TRUE)
 
-#explore interpolated output
-inter.rast <- terra::rast(esm.interp.files[2])
-terra::plot(inter.rast)
-#https://cran.r-project.org/web/packages/ipdw/vignettes/ipdw2.html
-#lat.lon.raster <- data.frame(xyFromCell(raster.nc.rotate.ext, 1:ncell(raster.nc.rotate.ext)))
-#vals.raster <- getValues(raster.nc.rotate.ext)
+this.terra.rast.1<- get_nc_description(esm.interp.files[1])
+terra::plot(this.terra.rast.1)
+
+this.terra.rast.2<- get_nc_description(esm.interp.files[2])
+terra::plot(this.terra.rast.2)
   
 ```
-
+Climatology GLORYS
 ```{r merge clim glorys, include=FALSE}
 
 #list monthly files to merge and calculate climatology
-glorys.monthly.files <- list.files(path = "~/storagebucket/GLORYS/monthly", pattern="*.nc", full.names = TRUE)
+glorys.monthly.files <- list.files(path = "~/storagebucket/GLORYS/monthly", pattern="*setlev.nc", full.names = TRUE)
 
 #climatology will be 1994-2023
 
@@ -774,16 +802,24 @@ glorys.name <- "cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50
 
 clim.glorys.file <- merge_glorys(glorys.monthly.files, merged.dir, glorys.name)
 
-clim.rast <- terra::rast(clim.glorys.file)
-terra::plot(clim.rast)
+this.terra.rast<- get_nc_description(clim.glorys.file)
+terra::plot(this.terra.rast)
 
 ```
+
+
 
 Add the grid-interpolated ESM deltas to the GLORYS climatology
 ```{r}
 
 glorys.clim.files <- list.files(path = "/home/atlantis/storagebucket/GLORYS/merged_files", pattern="*clim.nc", full.names = TRUE)
-esm.inter.files <- list.files(path = "/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files", pattern = "*interp.nc", full.names = TRUE)
+esm.inter.files <- list.files(path = "/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files", pattern = "*minterp.nc", full.names = TRUE)
+
+this.terra.rast<- get_nc_description(glorys.clim.files[1])
+terra::plot(this.terra.rast)
+
+this.terra.rast<- get_nc_description(esm.inter.files[1])
+terra::plot(this.terra.rast)
 
 rel.list <- paste0("r",1:2,"i1p1f1")
 
@@ -791,7 +827,274 @@ delta.dir <- "/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files"
 
 lapply(rel.list, interp_clim, esm.inter.files, glorys.clim.files, delta.dir, type ="add", timestep="month")
 
+
  
 ```
+map monthly future oceanographic projections on the GLORYS grid
+```{r Map future data, echo=TRUE}
+
+catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch')
+
+#select example future data
+future.files <- list.files(path="/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files",pattern=".projfut.", full.names = TRUE)
+this.future.file <- future.files[55]
+this.terra.rast<- get_nc_description(this.future.file)
+terra::plot(this.terra.rast)
+
+#esm.file  <- here("delta_method_final_outputs","GFDL-CM4_delta_thetao_2050.nc")
+#glorys.esm.file  <- here("GLORYS_ESM_final","GFDL-CM4_glorys_thetao_2050.nc")
+
+future.nc  <-  tidync::tidync(this.future.file) %>%
+  tidync::hyper_tibble() %>%
+  dplyr::filter(lev == min(lev))
+
+# esm.nc = tidync(esm.file)%>%
+#   hyper_tibble()%>%
+#   filter(lev == min(lev))
+# 
+# glorys.esm.nc = tidync(glorys.esm.file)%>%
+#   hyper_tibble()%>%
+#   filter(lev == min(lev))
+
+catch.geo.pacific <- catch.pacific.spatial %>% 
+    dplyr::mutate(longitude = sf::st_coordinates(.)[,1],
+                  latitude = sf::st_coordinates(.)[,2]) %>% 
+    dplyr::as_tibble() 
+
+future.goc <- ggplot2::ggplot(data = future.nc, ggplot2::aes(x= longitude, y = latitude, color = thetao))+
+  ggplot2::geom_point()+
+#  ggplot2::annotation_map(mapdata::map('worldHires'),fill = 'grey70',alpha=0.3) +
+  ggplot2::labs(title="Future temperature 2050",
+                color = "Sea temperature") +
+  ggplot2::geom_point(data = catch.geo.pacific, color = "black") 
+  
+
+future.goc
+```
+
+Get future temperature for convex hull created by cluster points
+```{r get cluster temp fut}
+
+catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch') %>% 
+   dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
+                  deci_lat = sf::st_coordinates(.)[,2])
+
+cluster.locs <- data.table::fread("~/storagebucket/IA-Input-data/data_clas.csv") %>% 
+  dplyr::filter(!is.na(Cluster_Label)) %>% 
+  dplyr::select(year:deci_lat, Cluster_Label) %>% 
+  sf::st_as_sf(coords = c("deci_lon", "deci_lat"), crs = 4269) %>% 
+  dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
+                deci_lat = sf::st_coordinates(.)[,2])
+
+#use to visualize clusters
+gc.cluster.plot <- cluster.locs %>% 
+  mutate(clusters=as.factor(Cluster_Label)) %>% 
+    ggplot2::ggplot() +
+    ggplot2::geom_sf() +
+    ggplot2::geom_sf(ggplot2::aes(color = clusters), alpha=0.4) +
+   ggplot2::labs(x = "Longitude",
+                  y="Latitude",
+                  title = "Georeferenced catch data",
+                  subtitle = "Grid 0.083° × 0.083° degree")
+          
+gc.cluster.plot    
+num.clusters <- unique(cluster.locs$Cluster_Label)
+
+start.time.interval <- rep(seq(from=2025, to=2074), each = 1)
+
+time.interval <- 1:length(start.time.interval)
+
+future.files <- list.files(path="/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files",pattern=".projfut.", full.names = TRUE)
+
+NumberOfCluster <- parallel::detectCores()  #- 1
+
+out.dir  <-  "/home/atlantis/storagebucket/ESM_CMIP6/futureclustertemp"
+dir.create(out.dir)
+
+parallel::mclapply(time.interval, get_meanclustertempfuture, future.files, cluster.locs, num.clusters, time.interval, start.time.interval, out.dir = "/home/atlantis/storagebucket/ESM_CMIP6/futureclustertemp", mc.cores = NumberOfCluster)
+
+
+```
+
+Interpolate with nco
+```{r}
+#https://acme-climate.atlassian.net/wiki/spaces/DOC/pages/754286611/Regridding+E3SM+Data+with+ncremap
+#Supply ncremap with a data-template file (dat.nc) and a grid-file name (grd.nc). Since there are no input files to regrid, ncremap exits after inferring the grid-file
+#ncremap -d dat.nc -g grd.nc
+
+
+esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*delta.nc", full.names = TRUE)
+this.delta.file <- esm.delta.files[1]
+
+glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_1997-02-01_setlev.nc"
+
+map.file <- "~/storagebucket/ESM_CMIP6/thetao/delta_files/map_file.nc"
+glorys.grid <- "~/storagebucket/ESM_CMIP6/thetao/delta_files/glorys_grid.nc" 
+esm.grid <- "~/storagebucket/ESM_CMIP6/thetao/delta_files/esm_grid.nc" 
+
+
+#inferr grid file from source ESM data file
+system(paste0("ncremap -d ",this.delta.file," -g ",esm.grid), wait=TRUE)
+
+#inferr grid file from target glorys data file
+system(paste0("ncremap -d ",glorys.nc," -g ",glorys.grid), wait=TRUE)
+
+#generate map file from grid files
+#ncremap -s grd_src.nc -g grd_dst.nc -m map.nc
+system(paste0("ncremap -s ",esm.grid," -g ",glorys.grid," -m ", map.file), wait=TRUE)
+
+#name output interpolated file
+this.inter.file <- gsub("delta.nc","interp.nc",this.delta.file)
+
+#regrid using map file
+#ncremap -m map.nc dat_src.nc dat_rgr.nc
+system(paste0("ncks --rnr=0.0 --map=map_file.nc ",this.delta.file, " ",this.inter.file))
+
+clim.rast <- terra::rast(this.inter.file)
+terra::plot(clim.rast)
+```
+
+
+```{r}
+##### IDW interpolation #####
+
+#https://rdrr.io/github/rspatial/terra/man/interpolate.html
+#https://nceas.github.io/oss-lessons/spatial-data-gis-law/4-tues-spatial-analysis-in-r.html
+
+esm.interp.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*interp.nc", full.names = TRUE)
+this.interp.file <- esm.interp.files[1]
+terra.rast <- terra::rast(this.interp.file)
+
+terra.points <- terra::as.points(terra.rast)
+
+rast.data.frame <- terra::as.data.frame(terra.points)
+
+gstat.rast <- gstat::gstat(id = "thetao", formula = thetao~1, locations = ~x+y, data=terra.rast, 
+            nmax=terra.rast, set=list(idp = .5))
+
+z <- terra::interpolate(terra.rast, gstat.rast, debug.level=0, index=1)
+
+
+# establish an extent within which you want to interpolate
+# -99/24 to -80/32.
+x_range <- as.numeric(c(-117.8304, -104.81))  # min/max longitude of the interpolation area
+y_range <- as.numeric(c(20.0495, 32.07921))  # min/max latitude of the interpolation area
+
+# create an empty grid of values ranging from the xmin-xmax, ymin-ymax
+grd <- expand.grid(x = seq(from = x_range[1],
+                   to = x_range[2], 
+                   by = 0.08333337),
+                   y = seq(from = y_range[1], to = y_range[2], 
+                   by = 0.08333337))  # expand points to grid
+class(grd)
+
+# points object
+sp::coordinates(grd) <- ~x + y
+# turn into a spatial pixels object
+sp::gridded(grd) <- TRUE
+
+sp::plot(grd)
+
+mg <- gstat(id = "zinc", formula = zinc~1, locations = ~x+y, data=meuse, 
+            nmax=7, set=list(idp = .5))
+z <- interpolate(r, mg, debug.level=0, index=1)
+
+```
+
+
+Interpolation using Inverse Path Distance Weighing
+IDW interpolation
+```{r}
+
+#convert netcdf file to csv 
+esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*delta.nc", full.names = TRUE)
+this.delta.file <- esm.delta.files[2]
+
+#GLORYS file for grid extraction
+glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_1997-02-01_setlev.nc"
+
+#regrid depths
+this.intlevel.file <- gsub("_delta","_intlevel", this.delta.file)
+
+  zlevs.glorys <- tidync::tidync(glorys.nc) %>% 
+    tidync::activate("D3") %>% 
+    tidync::hyper_tibble() %>% 
+    dplyr::pull('sfc') %>% 
+    paste(collapse=",")
+  
+system(paste0("cdo -intlevel,",zlevs.glorys," ",this.delta.file," ",this.intlevel.file), wait=TRUE)
+
+get_nc_description(this.intlevel.file)
+
+#hyperslab each depth
+ zlevs.intlevel <- tidync::tidync(this.intlevel.file) %>% 
+    tidync::activate("D4") %>% 
+    tidync::hyper_tibble() %>% 
+    dplyr::pull('lev') 
+ 
+ for(eachlevel in 1:length(zlevs.intlevel)){
+   
+   this.zlevel <- zlevs.intlevel[eachlevel]
+   
+   this.depth.intlevel <- gsub("_intlevel",paste0("_intlevel_",eachlevel), this.intlevel.file)
+   
+   system(paste0("ncks -O -F -d"," lev,",this.zlevel," ", this.intlevel.file," ", this.depth.intlevel), wait=TRUE)
+ this.raster.layer <- get_nc_description(this.depth.intlevel)
+terra::plot(this.raster.layer)
+   
+#convert raster to xy data 
+
+system(paste0("cdo -outputtab,date,lon,lat,value"," ", this.depth.intlevel," > outfile.txt"), wait = TRUE)
+test <- readLines("outfile.txt")
+
+ncin <- ncdf4::nc_open(this.depth.intlevel)
+lon <- ncdf4::ncvar_get(ncin, "lon")
+lat <- ncdf4::ncvar_get(ncin, "lat")
+time <- ncdf4::ncvar_get(ncin, "time")
+thetao <- ncdf4::ncvar_get(ncin, "thetao")
+thetao.vec <- as.vector(thetao)
+ncin.mat <- as.matrix(expand.grid(lon, lat, time))
+thetao.mat <- data.frame(cbind(ncin.mat, thetao.vec))
+thetao.mat$Var3 <- as.POSIXct(thetao.mat$Var3*175*365*2, origin='1850-1-1 00:00:00')
+ }
+    
+
+this.terra.rast<- get_nc_description(this.delta.file)
+
+
+system(paste0("cdo -outputtab,time,lat:6,lon:6,lev ",this.delta.file," >> outfile.csv"), wait= TRUE)
+
+raster.data <- readr::read_delim("outfile.csv",delim=" ")
+```
+
+
+Tried running this but it almost fills RAM memory
+```{r IDW, eval=FALSE, include=FALSE}
+#Interpolation similar to splines
+#https://cran.r-project.org/web/packages/ipdw/vignettes/ipdw2.html
+#lat.lon.raster <- data.frame(xyFromCell(raster.nc.rotate.ext, 1:ncell(raster.nc.rotate.ext)))
+#vals.raster <- getValues(raster.nc.rotate.ext)
+
+esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*delta.nc", full.names = TRUE)
+
+this.delta.file <- esm.delta.files[1]
+
+this.rast.file <- terra::rast(this.delta.file)
+
+layer.subset <- terra::subset(this.rast.file,1)
+point.layer <- terra::as.points(layer.subset) %>% 
+  sf::st_as_sf(.) %>% 
+  sf::st_transform(4485)
+
+coast.pol <- sf::st_read(here::here("data-raw","SHP","Golfo_california_wetland_poly_WGS84.shp")) %>% 
+  sf::st_transform(4485)
+
+costras <- ipdw::costrasterGen(point.layer, coast.pol, extent = "pnts",
+  projstr = raster::projection(coast.pol))
+
+#costras <- costrasterGen(pnts, pols, extent = "pnts", projstr = raster::projection(pols))
+
+```
+
 
 

@@ -10,12 +10,19 @@
 #' @examples
 correct_grid <- function(this.file, this.var){
   
-  #this.file <- "/home/atlantis/storagebucket/ESM_CMIP6/MPI_ESM/tos_Omon_MPI-ESM1-2-HR_historical_r10i1p1f1_gn_198501-198912.nc"
   print(this.file)
-  this.coord.file <- gsub("[:.:]nc","_coord.nc", this.file)
   #create weight file  
-  weight.file <- gsub("[:.:]nc","_weight.nc", this.file)
-    
+  #https://code.mpimet.mpg.de/boards/1/topics/8676?page=2&r=8685
+  this.sethalo.file <- gsub("[:.:]nc","_sethalo.nc", this.file)
+  
+  #fixes issue with missing values after remapping
+  system(paste0("cdo sethalo,0,1 ",this.file," ", this.sethalo.file), wait=TRUE)
+  this.terra.rast<- get_nc_description(this.sethalo.file)
+  terra::plot(this.terra.rast)
+  
+  
+  weight.file <- gsub("_sethalo.nc","_weight.nc", this.sethalo.file)
+  
  if(!file.exists(weight.file)){
   
    #use cdo to regrid the files, this will assign a lat and lon dimension
@@ -23,15 +30,20 @@ correct_grid <- function(this.file, this.var){
    # https://github.com/trondkr/cmip6
    #MPI-ESM1 output has lat lon as variables, not dimensions so it cannot be used directly
    #generate a weights file
-   ClimateOperators::cdo("sinfo", this.file)
-   ClimateOperators::cdo(paste0("genbil,r802x404 ", this.file," ", weight.file, sep="")) 
+   
+   ClimateOperators::cdo(paste0("genbil,r802x404 ", this.sethalo.file," ", weight.file, sep="")) 
    
  }
+  
+  this.coord.file <- gsub("_weight.nc","_coord.nc", weight.file)
   
   if(!file.exists(this.coord.file)){
 
     #Use weight file to regrid the file   
-    ClimateOperators::cdo(paste0("remap,r802x404,",weight.file," ", this.file," ",this.coord.file,sep=""))
-    ClimateOperators::cdo("sinfo", this.coord.file)
+    ClimateOperators::cdo(paste0("remap,r802x404,",weight.file," ", this.sethalo.file," ",this.coord.file,sep=""))
+     
+    this.terra.rast<- get_nc_description(this.coord.file)
+    terra::plot(this.terra.rast)
+    
   } 
   }

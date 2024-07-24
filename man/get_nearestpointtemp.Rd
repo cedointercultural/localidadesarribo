@@ -11,8 +11,7 @@ get_nearestpointtemp(
   glorys.files,
   catch.geo,
   start.time.interval,
-  out.dir,
-  no.temps
+  out.dir
 )
 }
 \arguments{
