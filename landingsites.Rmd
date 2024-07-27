@@ -582,7 +582,9 @@ catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_ca
 
 cluster.locs <- data.table::fread("~/storagebucket/IA-Input-data/data_clas.csv") %>% 
   dplyr::filter(!is.na(Cluster_Label)) %>% 
-  dplyr::select(year:deci_lat, Cluster_Label) %>% 
+  dplyr::select(year:deci_lat, Cluster_Label) 
+
+cluster.spatial <- cluster.locs %>% 
   sf::st_as_sf(coords = c("deci_lon", "deci_lat"), crs = 4269) %>% 
   dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
                 deci_lat = sf::st_coordinates(.)[,2])
@@ -830,7 +832,8 @@ lapply(rel.list, interp_clim, esm.inter.files, glorys.clim.files, delta.dir, typ
 
  
 ```
-map monthly future oceanographic projections on the GLORYS grid
+
+Plot monthly future oceanographic projections with catch records
 ```{r Map future data, echo=TRUE}
 
 catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch')
@@ -872,9 +875,9 @@ future.goc <- ggplot2::ggplot(data = future.nc, ggplot2::aes(x= longitude, y = l
 future.goc
 ```
 
-Get future temperature for convex hull created by cluster points
-```{r get cluster temp fut}
+Create convex hulls based on 2022-2023 cluster points
 
+```{r}
 catch.pacific.spatial <- sf::st_read(dsn="outputs/gpkg_grid.gpkg", layer='goc_catch') %>% 
    dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
                   deci_lat = sf::st_coordinates(.)[,2])
@@ -886,38 +889,58 @@ cluster.locs <- data.table::fread("~/storagebucket/IA-Input-data/data_clas.csv")
   dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
                 deci_lat = sf::st_coordinates(.)[,2])
 
-#use to visualize clusters
-gc.cluster.plot <- cluster.locs %>% 
-  mutate(clusters=as.factor(Cluster_Label)) %>% 
-    ggplot2::ggplot() +
-    ggplot2::geom_sf() +
-    ggplot2::geom_sf(ggplot2::aes(color = clusters), alpha=0.4) +
-   ggplot2::labs(x = "Longitude",
-                  y="Latitude",
-                  title = "Georeferenced catch data",
-                  subtitle = "Grid 0.083° × 0.083° degree")
-          
-gc.cluster.plot    
-num.clusters <- unique(cluster.locs$Cluster_Label)
+#separate points for target years
+cluster.future <- cluster.locs %>% 
+  dplyr::filter(year %in% c(2022,2023))
 
-start.time.interval <- rep(seq(from=2025, to=2074), each = 1)
+#get coordinates for clusters to use in subsetting future files
+#https://code.mpimet.mpg.de/boards/2/topics/11284
 
-time.interval <- 1:length(start.time.interval)
+cluster.nums <- cluster.future %>% 
+  sf::st_drop_geometry() %>% 
+  dplyr::distinct(Cluster_Label) %>% 
+  dplyr::pull(Cluster_Label)
 
-future.files <- list.files(path="/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files",pattern=".projfut.", full.names = TRUE)
+#generate coordinate files for the convex hull of each cluster
+#following the example in https://code.mpimet.mpg.de/boards/2/topics/11284
+cluster.path  <-  "/home/atlantis/storagebucket/ESM_CMIP6/thetao/futureclustercoords"
+dir.create(cluster.path)
+
+lapply(cluster.nums,get_clustercoords,cluster.path)
+
+```
+
+Get future temperature for convex hull created by 2022-2023 cluster points
+```{r get cluster temp fut}
+
+#get coordinates for clusters to use in subsetting future files
+#https://code.mpimet.mpg.de/boards/2/topics/11284
+
+cluster.nums <- 0:7
+
+rel.list <- paste0("r",1:2,"i1p1f1")
+
+future.time <- rep(seq(from=2025, to=2074), each = 1)
+
+future.files <- list.files(path="/home/atlantis/storagebucket/ESM_CMIP6/thetao/delta_files",pattern=".mprojfut_", full.names = TRUE)
 
 NumberOfCluster <- parallel::detectCores()  #- 1
 
-out.dir  <-  "/home/atlantis/storagebucket/ESM_CMIP6/futureclustertemp"
-dir.create(out.dir)
+future.path  <-  "/home/atlantis/storagebucket/ESM_CMIP6/thetao/futuretemp"
+dir.create(future.path)
 
-parallel::mclapply(time.interval, get_meanclustertempfuture, future.files, cluster.locs, num.clusters, time.interval, start.time.interval, out.dir = "/home/atlantis/storagebucket/ESM_CMIP6/futureclustertemp", mc.cores = NumberOfCluster)
+cluster.coords <- list.files(path=cluster.path, pattern=".txt", full.names = TRUE)
+
+no.rel <- 1:length(rel.list)
+
+#depth indices 1-3 are depths 6,7 & 9
+lapply(no.rel,get_futuretemp,rel.list, future.files, future.time, future.path, cluster.nums, cluster.coords, ini.depth=1, end.depth=3)
 
 
 ```
 
 Interpolate with nco
-```{r}
+```{r NCo interpolation, eval=FALSE, include=FALSE}
 #https://acme-climate.atlassian.net/wiki/spaces/DOC/pages/754286611/Regridding+E3SM+Data+with+ncremap
 #Supply ncremap with a data-template file (dat.nc) and a grid-file name (grd.nc). Since there are no input files to regrid, ncremap exits after inferring the grid-file
 #ncremap -d dat.nc -g grd.nc
@@ -955,8 +978,10 @@ terra::plot(clim.rast)
 ```
 
 
-```{r}
+```{r IDW interpolation, eval=FALSE, include=FALSE}
 ##### IDW interpolation #####
+#Interpolation similar to splines
+#https://cran.r-project.org/web/packages/ipdw/vignettes/ipdw2.html
 
 #https://rdrr.io/github/rspatial/terra/man/interpolate.html
 #https://nceas.github.io/oss-lessons/spatial-data-gis-law/4-tues-spatial-analysis-in-r.html
@@ -998,101 +1023,6 @@ sp::plot(grd)
 mg <- gstat(id = "zinc", formula = zinc~1, locations = ~x+y, data=meuse, 
             nmax=7, set=list(idp = .5))
 z <- interpolate(r, mg, debug.level=0, index=1)
-
-```
-
-
-Interpolation using Inverse Path Distance Weighing
-IDW interpolation
-```{r}
-
-#convert netcdf file to csv 
-esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*delta.nc", full.names = TRUE)
-this.delta.file <- esm.delta.files[2]
-
-#GLORYS file for grid extraction
-glorys.nc <- "~/storagebucket/GLORYS/monthly/cmems_mod_glo_phy_my_0.083deg_P1M-m_thetao_116.08W-105.17W_20.50N-32.00N_0.49-453.94m_1997-02-01_setlev.nc"
-
-#regrid depths
-this.intlevel.file <- gsub("_delta","_intlevel", this.delta.file)
-
-  zlevs.glorys <- tidync::tidync(glorys.nc) %>% 
-    tidync::activate("D3") %>% 
-    tidync::hyper_tibble() %>% 
-    dplyr::pull('sfc') %>% 
-    paste(collapse=",")
-  
-system(paste0("cdo -intlevel,",zlevs.glorys," ",this.delta.file," ",this.intlevel.file), wait=TRUE)
-
-get_nc_description(this.intlevel.file)
-
-#hyperslab each depth
- zlevs.intlevel <- tidync::tidync(this.intlevel.file) %>% 
-    tidync::activate("D4") %>% 
-    tidync::hyper_tibble() %>% 
-    dplyr::pull('lev') 
- 
- for(eachlevel in 1:length(zlevs.intlevel)){
-   
-   this.zlevel <- zlevs.intlevel[eachlevel]
-   
-   this.depth.intlevel <- gsub("_intlevel",paste0("_intlevel_",eachlevel), this.intlevel.file)
-   
-   system(paste0("ncks -O -F -d"," lev,",this.zlevel," ", this.intlevel.file," ", this.depth.intlevel), wait=TRUE)
- this.raster.layer <- get_nc_description(this.depth.intlevel)
-terra::plot(this.raster.layer)
-   
-#convert raster to xy data 
-
-system(paste0("cdo -outputtab,date,lon,lat,value"," ", this.depth.intlevel," > outfile.txt"), wait = TRUE)
-test <- readLines("outfile.txt")
-
-ncin <- ncdf4::nc_open(this.depth.intlevel)
-lon <- ncdf4::ncvar_get(ncin, "lon")
-lat <- ncdf4::ncvar_get(ncin, "lat")
-time <- ncdf4::ncvar_get(ncin, "time")
-thetao <- ncdf4::ncvar_get(ncin, "thetao")
-thetao.vec <- as.vector(thetao)
-ncin.mat <- as.matrix(expand.grid(lon, lat, time))
-thetao.mat <- data.frame(cbind(ncin.mat, thetao.vec))
-thetao.mat$Var3 <- as.POSIXct(thetao.mat$Var3*175*365*2, origin='1850-1-1 00:00:00')
- }
-    
-
-this.terra.rast<- get_nc_description(this.delta.file)
-
-
-system(paste0("cdo -outputtab,time,lat:6,lon:6,lev ",this.delta.file," >> outfile.csv"), wait= TRUE)
-
-raster.data <- readr::read_delim("outfile.csv",delim=" ")
-```
-
-
-Tried running this but it almost fills RAM memory
-```{r IDW, eval=FALSE, include=FALSE}
-#Interpolation similar to splines
-#https://cran.r-project.org/web/packages/ipdw/vignettes/ipdw2.html
-#lat.lon.raster <- data.frame(xyFromCell(raster.nc.rotate.ext, 1:ncell(raster.nc.rotate.ext)))
-#vals.raster <- getValues(raster.nc.rotate.ext)
-
-esm.delta.files <- list.files(path = "~/storagebucket/ESM_CMIP6/thetao/delta_files", pattern="*delta.nc", full.names = TRUE)
-
-this.delta.file <- esm.delta.files[1]
-
-this.rast.file <- terra::rast(this.delta.file)
-
-layer.subset <- terra::subset(this.rast.file,1)
-point.layer <- terra::as.points(layer.subset) %>% 
-  sf::st_as_sf(.) %>% 
-  sf::st_transform(4485)
-
-coast.pol <- sf::st_read(here::here("data-raw","SHP","Golfo_california_wetland_poly_WGS84.shp")) %>% 
-  sf::st_transform(4485)
-
-costras <- ipdw::costrasterGen(point.layer, coast.pol, extent = "pnts",
-  projstr = raster::projection(coast.pol))
-
-#costras <- costrasterGen(pnts, pols, extent = "pnts", projstr = raster::projection(pols))
 
 ```
 

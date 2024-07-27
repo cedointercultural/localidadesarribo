@@ -4,7 +4,7 @@
 \alias{interpolate_delta}
 \title{Interpolate delta anomaly}
 \usage{
-interpolate_delta(this.delta.file, glorys.nc)
+interpolate_delta(this.delta.file, glorys.nc, delta.path)
 }
 \arguments{
 \item{this.delta.file}{}

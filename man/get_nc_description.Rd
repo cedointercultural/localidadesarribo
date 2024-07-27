@@ -10,7 +10,7 @@ get_nc_description(thisraster)
 \item{thisraster}{}
 }
 \value{
-terra.plot Plot using terra
+this.terra.rast terra raster
 }
 \description{
 Get raster resolution, description and plot
