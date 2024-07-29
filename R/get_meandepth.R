@@ -12,6 +12,7 @@ get_meandepth <- function(this.file, depthname, eachcluster){
   #get data for monthly mean aggregated by depth
   vert.nc.tibble <- tidync::tidync(this.file) %>% 
     tidync::hyper_tibble() 
+  print(vert.nc.tibble)
   #extract time
   tunit <- ncmeta::nc_atts(this.file, "time") %>% 
     tidyr::unnest(cols = c(value)) %>% 
@@ -24,8 +25,9 @@ get_meandepth <- function(this.file, depthname, eachcluster){
   vert.this.file.data <- vert.nc.tibble %>% 
     dplyr::select(-lon, -lat, -time) %>% 
     dplyr::bind_cols(vert.time.date) %>% 
-    dplyr::distinct(year,month) %>% 
+    dplyr::distinct(year,month, thetao) %>% 
     dplyr::mutate(cluster = eachcluster, depth_m = depthname)
   
+  print(vert.this.file.data)
   return(vert.this.file.data)
 }
