@@ -38,7 +38,7 @@ locs.pesca.faltantes <- locs.pesca %>%
 no.locs <- 1:nrow(locs.pesca.faltantes)
 
 
-ggmap::register_google(key = "AIzaSyCgsdgFvjpvROnXBt2CWtHe7RKJ2Ox8_us", write = TRUE)
+ggmap::register_google(key = "AIzaSyC8Rmok0CK4pqJ_pkZGKGfKBcD7JaqG9qM", write = TRUE)
 
 #Use mutate_geocode() to create a new data frame with added columns for latitude and longitude coordinates (output = "latlon" argument). output = "latlona" returns latitude, longitude, and the matched address (to cross-check against your address) as new columns.
 
