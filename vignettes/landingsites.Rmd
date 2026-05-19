@@ -47,7 +47,7 @@ coast.selecc <- stringi::stri_trans_general(str = ents.coast.selecc, id = "Latin
 
 #Currently only using data 2018-2023, other data have too many inconsistencies
 #catch.files <- list.files(path = here::here("data-raw","original_fisheries_data"), full.names = TRUE)
-catch.files <- list.files(path = here::here("data-raw","original_fisheries_data"), full.names = TRUE, pattern = "2018|2019|2020|2021|2022|2023")
+catch.files <- list.files(path = here::here("data-raw","original_fisheries_data"), full.names = TRUE, pattern = "2018|2019|2020|2021|2022|2023|2024|2025")
 
 no.catchfiles <- 1:length(catch.files)
 
@@ -94,8 +94,8 @@ fishery.offices.list <- get_fishery_office_catch(catchdata)
 #there are locations named La Reforma sites in Sinaloa so had to be extracted manually
 
 fishery.office.table <- fishery.offices.list %>% 
-  dplyr::bind_rows() %>% 
-  dplyr::arrange(NOM_LOC,NOM_ENT)
+ dplyr::left_join(inegigc) %>% 
+  dplyr::select(-POBTOT, -POBFEM,  -POBMAS)
 
 fishery.spatial <- sf::st_as_sf(fishery.office.table, coords = c("deci_lon", "deci_lat"), crs = 4326) %>% 
   sf::st_transform(4269)
@@ -104,6 +104,18 @@ fishery.spatial %>%
   sf::st_write(here::here("outputs","fishery_offices.shp"), append=FALSE)
 
 readr::write_csv(fishery.office.table, here::here("outputs","fishery_offices.csv"))
+
+world <- rnaturalearth::ne_countries(scale = "medium", returnclass = "sf")
+
+point_extent <- sf::st_bbox(fishery.spatial)
+
+ggplot2::ggplot() +
+   ggplot2::geom_sf(data = world, fill = "antiquewhite", color = "gray") + # Base layer
+  ggplot2::geom_sf(data = fishery.spatial, size = 2, color = "blue") +
+  ggplot2::coord_sf(xlim = c(point_extent["xmin"], point_extent["xmax"]), 
+           ylim = c(point_extent["ymin"], point_extent["ymax"]),
+           expand = TRUE) +   
+  ggplot2::theme_minimal()
 
 fisheryoffice <- fishery.office.table
   
@@ -226,17 +238,16 @@ georef.locs.sp <- georef.locs %>%
 
 #Add distance to nearest fishery office to help resolve duplicates when georeferincing a catch 
 
-fishery.offices <- sf::st_read(here::here("outputs","fishery_offices.shp")) %>%   sf::st_transform(crs = 4326) %>% 
-  sf::st_centroid() 
+fishery.offices <- sf::st_read(here::here("outputs","fishery_offices.shp")) 
 
 num.georef.locs <- 1:nrow(georef.locs.sp)
 
-georef.locs.dist <- parallel::mclapply(num.georef.locs, get_distance, fishery.offices) %>% 
-  dplyr::bind_rows() 
+#georef.locs.dist <- parallel::mclapply(num.georef.locs, get_distance, fishery.offices) 
 
+georef.locs.dist <- lapply(num.georef.locs, get_distance, fishery.offices) 
 
 georeflocskm <- georef.locs.dist %>% 
-  mutate(distance_km = distance / 1000)
+ dplyr::bind_rows()
 
 readr::write_csv(georeflocskm, here::here("outputs","georef_locations.csv"))
 

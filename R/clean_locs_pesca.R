@@ -12,8 +12,7 @@ clean_locs_pesca <- function(){
   
   googlesheets4::gs4_deauth()
   
-  #CONTINUE HERE, ADD COL NAMES
-  locs.corr.pesca <- googlesheets4::read_sheet("1Nww_0aSf2yQv9YqK8LqmJmIM2wwpHZCSpG1NcGfIfHQ", sheet = "localidades_captura_inegi") %>% 
+   locs.corr.pesca <- googlesheets4::read_sheet("1Nww_0aSf2yQv9YqK8LqmJmIM2wwpHZCSpG1NcGfIfHQ", sheet = "localidades_captura_inegi") %>% 
     keep_when(!is.na(NOM_LOC_REV)) %>% 
     dplyr::rename(NOM_ENT_REV=ENTIDAD) %>% 
     select(NOM_LOC, NOM_ENT, NOM_LOC_REV, NOM_ENT_REV)

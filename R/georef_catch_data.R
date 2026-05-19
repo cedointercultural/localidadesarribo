@@ -16,22 +16,22 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
   fresh.sp <- c("TRUCHA","CARPA", "BAGRE", "ORNATO", "PECES DE ORNATO", "OTRAS")
   
   catch.code <- catchdata %>%
-    keep_when(!species %in% fresh.sp) %>%
-    mutate(catch_code = paste(rnp_code, NOM_ENT, NOM_LOC, fishery_office, sep="_")) %>% 
+    dplyr::filter(!species %in% fresh.sp) %>%
+    dplyr::mutate(catch_code = paste(rnp_code, NOM_ENT, NOM_LOC, fishery_office, sep="_")) %>% 
     dplyr::left_join(georeff.codes, by = c("catch_code")) 
   
   georef.catch.data <- catch.code %>% 
-    keep_when(!is.na(deci_lat)) %>% 
+    dplyr::filter(!is.na(deci_lat)) %>% 
     dplyr::group_by(rnp_code, NOM_LOC, NOM_ENT, fishery_office, species, landed_w_kg, value_mxn,
                     year, month) %>%
-    summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop')
+    dplyr::summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop')
   
   
   permitdata.loc <- permitdata %>% 
-    select(-NOM_LOC) 
+    dplyr::select(-NOM_LOC) 
   
   missing.georef.catch.data <- catch.code %>% 
-    keep_when(is.na(deci_lat)) 
+    dplyr::filter(is.na(deci_lat)) 
   
   missing.geoloc <- missing.georef.catch.data %>% 
     dplyr::distinct(rnp_code, NOM_ENT, NOM_LOC, fishery_office, species, landed_w_kg, value_mxn,
@@ -39,23 +39,23 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
     dplyr::left_join(permitdata.loc, by = c("rnp_code","fishery_office","NOM_ENT")) 
   
   rnp.geoloc <- missing.geoloc %>%
-    keep_when(!is.na(deci_lat)) %>% 
+    dplyr::filter(!is.na(deci_lat)) %>% 
     dplyr::group_by(rnp_code, NOM_LOC, NOM_ENT, fishery_office, species, landed_w_kg, value_mxn,
                     year, month) %>%
-    summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop')
+    dplyr::summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop')
   
   nocoords.data <- missing.geoloc %>% 
-    keep_when(is.na(deci_lat)) %>% 
-    distinct(NOM_ENT, NOM_LOC) 
+    dplyr::filter(is.na(deci_lat)) %>% 
+    dplyr::distinct(NOM_ENT, NOM_LOC) 
   
   readr::write_csv(nocoords.data, here::here("outputs","nocoords_data.csv"))
   
   all.catch.code <- rbind(georef.catch.data, rnp.geoloc) %>% 
     dplyr::group_by(rnp_code, NOM_LOC, NOM_ENT, fishery_office, species, landed_w_kg, value_mxn,
                     year, month) %>%
-    summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop') %>% 
+    dplyr::summarise(deci_lat = mean(deci_lat), deci_lon = mean(deci_lon), .groups = 'drop') %>% 
     #eliminate all locations south of Cabo Corrientes 20.43386153865933, -105.69209230968688
-    keep_when(deci_lat>20.43386153865933)
+    dplyr::filter(deci_lat>20.43386153865933)
   
   catch.spatial <- all.catch.code %>% 
     sf::st_as_sf(coords = c("deci_lon", "deci_lat"), crs = 4269)
@@ -98,13 +98,13 @@ georef_catch_data <- function(georefcatchlocs, catchdata){
     dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
                   deci_lat = sf::st_coordinates(.)[,2]) %>% 
     dplyr::as_tibble() %>% 
-    select(-geometry)
+    dplyr::select(-geometry)
  
   catch.geo.pacific <- catch.pacific %>% 
     dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
                   deci_lat = sf::st_coordinates(.)[,2]) %>% 
     dplyr::as_tibble() %>% 
-    select(-geometry)
+    dplyr::select(-geometry)
   
    
   readr::write_csv(catch.geo.locs, here::here("outputs","georefcatch_loc.csv"))
@@ -127,7 +127,7 @@ ggplot2::ggsave(filename= "catch_plot_sp.png", plot=catch.plot.inter, path=here:
   catch.ngoc <- catch.pacific %>% 
     dplyr::mutate(deci_lon = sf::st_coordinates(.)[,1],
                   deci_lat = sf::st_coordinates(.)[,2]) %>% 
-    keep_when(deci_lat>28)
+    dplyr::filter(deci_lat>28)
   
   catch.plot.ngoc <- ggplot2::ggplot(gc.polygon) + 
     ggplot2::geom_sf() +

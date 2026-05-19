@@ -72,7 +72,16 @@ get_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca){
     readr::read_csv(file="x\næøå", locale = readr::locale(encoding = "UTF-8"))
     #catch.file <- data.table::fread(this.catchfile, skip=2)
     
-  catch.file <- readr::read_csv(this.catchfile, skip=2,  locale = readr::locale(encoding = "UTF-8"))
+    if(this.catchfileno==7){
+      
+      catch.file <- readr::read_csv(this.catchfile, skip=4,  locale = readr::locale(encoding = "UTF-8"))
+      
+    } else {
+      
+      catch.file <- readr::read_csv(this.catchfile, skip=2,  locale = readr::locale(encoding = "UTF-8"))
+      
+    }
+    
   }
   
   
@@ -136,6 +145,8 @@ get_catch <- function(this.catchfileno, catch.files, coast.selecc, locs.pesca){
            NOM_LOC= gsub("\\?", "N", NOM_LOC),
            fishery_office = gsub("Ã‘", "N", fishery_office), 
            species = gsub("Ã‘", "N", species)) %>% 
+    dplyr::mutate(fishery_office = gsub("�","N", fishery_office)) %>% 
+    dplyr::mutate(NOM_LOC = gsub("�","N", NOM_LOC ))%>% 
     mutate(fishery_office= stringi::stri_trans_general(str = fishery_office, id = "Latin-ASCII"), fishery_office = toupper(fishery_office)) %>% 
     mutate(NOM_LOC= stringi::stri_trans_general(str = NOM_LOC, id = "Latin-ASCII"), NOM_LOC = toupper(NOM_LOC)) %>% 
     mutate(NOM_ENT= stringi::stri_trans_general(str = NOM_ENT, id = "Latin-ASCII"), NOM_ENT = toupper(NOM_ENT)) %>% 
