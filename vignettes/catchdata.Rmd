@@ -393,7 +393,9 @@ rgi.catch.plot <- rgi.catch %>%
    ggplot2::facet_wrap(~species, scales = "free_y") +
   ggplot2::labs(title = "Captura Región de Grandes Islas", x = "Año", y = "Captura toneladas", fill = "Entidad") 
 
- rgi.catch %>% data.table::fwrite(here::here("outputs","captura_rgi_2018-2025"))
+ rgi.catch %>% data.table::fwrite(here::here("outputs","captura_rgi_2018-2025.csv"))
+
+ #rgi.catch <- data.table::fread(here::here("outputs","captura_rgi_2018-2025.csv"))
 
 ```
 
